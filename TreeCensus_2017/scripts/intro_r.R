@@ -1,10 +1,3 @@
-a = 2
-b = 4
-
-c = a + b
-
-d <- 7
-
 #setting a working directory
 
 setwd("~/GitHub/EastWoods-MonitoringPlots/TreeCensus_2017/")
