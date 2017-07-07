@@ -51,18 +51,21 @@ oldtree.data$Species <- as.factor(substr(oldtree.data$Species, 1, 4))
 # Fixing a typo
 
 oldtree.data$Species <- recode(oldtree.data$Species, " 'FR'='FRAM'; 'UL'='ULRU'; 'UL?'='ULRU'; 'QUEL'='QUAL'; 'ACNE' = 'ACNI' ")
-                            
+
 # Ordering canopy levels logically
 
 tree.data$Canopy <- factor(tree.data$Canopy, levels=c("D", "CD", "I", "U", NA))
 
-#Removing extra columns
+# Ordering Species
 
-heights2.data <- heights.data[c(3, 8)]
+tree.data$Sp_code <- factor(tree.data$Sp_code, 
+                            levels=c("ACNI", "ACSA", "CACO", "CR", "FRAM", "JUNI", "OSVI", "POTR", "PRSE", "QUAL", "QUMA", "QURU", "TIAM", "ULRU", "UNKN", "unkn", NA))
+oldtree.data$Species <-factor(oldtree.data$Species, 
+                              levels=c("ACNI", "ACSA", "CACO", "CR", "FRAM", "JUNI", "OSVI", "POTR", "PRSE", "QUAL", "QUMA", "QURU", "TIAM", "ULRU", "UNKN", "unkn", NA))
 
 # Combining the tree height data into the general survey data
 
-alltree.data <- merge(tree.data, heights2.data, by = "Tag")
+alltree.data <- merge(tree.data, heights.data[c(3,8)], by = "Tag")
 
 # --------------------------------------
 # Begining calculations
@@ -84,8 +87,6 @@ plot.list <- c("N115", "U134", "HH115", "B127")
 
 oldtree.data.subset <- oldtree.data[oldtree.data$Plot %in% unique(plots.data$CORNER),]
 
-oldtree.data.subset2 <- oldtree.data[oldtree.data$Plot %in% plot.list,]
-
 # Creating stand data
 
 stand.data <- plots.data[3:4]
@@ -97,15 +98,15 @@ names(stand.data)[2] <- "Stand"
 # Summing basal area by plot and then by each species in the plot
 
 oldba.data <- aggregate(as.numeric(as.character(oldtree.data[,"BA"])),
-                          oldtree.data[,c("Plot", "Species")],
-                          sum)
+                        oldtree.data[,c("Plot", "Species")],
+                        sum)
 oldba.data.subset <- aggregate(as.numeric(as.character(oldtree.data.subset[,"BA"])),
-                                    oldtree.data.subset[,c("Plot", "Species")],
-                                    sum)
+                               oldtree.data.subset[,c("Plot", "Species")],
+                               sum)
 
 newba.data <- aggregate(as.numeric(as.character(alltree.data[,"BA"])),
-                          alltree.data[,c("Plot", "Sp_code")],
-                          sum)
+                        alltree.data[,c("Plot", "Sp_code")],
+                        sum)
 
 names(oldba.data)[3] <- "BA.tot"
 names(oldba.data.subset)[3] <- "BA.tot"
@@ -118,33 +119,26 @@ names(newba.data)[3] <- "BA.tot"
 oldba.data$Density <- oldba.data$BA.tot/250 # Units m2/ha
 
 oldba.data.subset$Density <- oldba.data.subset$BA.tot/250 # Units m2/ha
-  
+
 newba.data$Density <- newba.data$BA.tot/400 # Units m2/ha
 
 # Summing number of stems per plot per species
 
 olddensity.data <- aggregate(oldtree.data[,"BA"],
-                              oldtree.data[,c("Plot", "Species")],
-                              length)
+                             oldtree.data[,c("Plot", "Species")],
+                             length)
 
 olddensity.data.subset <- aggregate(oldtree.data.subset[,"BA"],
-                                     oldtree.data.subset[,c("Plot", "Species")],
-                                     length)
+                                    oldtree.data.subset[,c("Plot", "Species")],
+                                    length)
 
 newdensity.data <- aggregate(tree.data["DBH"],
-                          tree.data[,c("Plot", "Sp_code")],
-                          length)
+                             tree.data[,c("Plot", "Sp_code")],
+                             length)
 
 names(olddensity.data)[3] <- "Stem.count"
 names(olddensity.data.subset)[3] <- "Stem.count"
 names(newdensity.data)[3] <- "Stem.count"
-
-# -------------------------------------
-
-# Subsetting the 4 2017 plots
-
-oldba.data.subset2 <- oldba.data[oldba.data$Plot %in% plot.list,]
-olddensity.data.subset2 <-olddensity.data[olddensity.data$Plot %in% plot.list,]
 
 # --------------------------------------
 
@@ -153,10 +147,6 @@ olddensity.data.subset2 <-olddensity.data[olddensity.data$Plot %in% plot.list,]
 newba.data$Plot <- recode(newba.data$Plot, " 'A1'='N115'; 'B5'='U134'; 'C6'='HH115'; 'D1'='B127' ")
 newdensity.data$Plot <- recode(newdensity.data$Plot, " 'A1'='N115'; 'B5'='U134'; 'C6'='HH115'; 'D1'='B127' ")
 
-
-newba.data$Year <- 2017
-oldba.data.subset2$Year <- 2011
-
 names(newba.data)[2] <- "Species"
 names(newdensity.data)[2] <- "Species"
 
@@ -164,42 +154,23 @@ names(newdensity.data)[2] <- "Species"
 
 oldba.data.subset.stand <- merge(oldba.data.subset, stand.data, by = "Plot")
 newba.data.stand <- merge(newba.data, stand.data, by = "Plot")
-
-oldba.data.subset.stand$Year <- 2011
-
 old.density <- merge(olddensity.data.subset, stand.data, by = "Plot")
 new.density <- merge(newdensity.data, stand.data, by = "Plot")
 
+# Adding year
+
+newba.data.stand$Year <- 2017
+oldba.data.subset.stand$Year <- 2011
 old.density$Year <- 2011
 new.density$Year <- 2017
 
 # Combining the basal area data 
 
-ba2.all <- rbind(newba.data, oldba.data.subset2)
 ba.all <- rbind(newba.data.stand, oldba.data.subset.stand)
 
 # Combining density data
 
 density.all <- rbind(old.density, new.density)
-
-# -------------------------------------
-
-# Calculating things needed for error bars
-
-ba.error2 <- aggregate(ba.all$Density,
-                           ba.all[,c("Stand", "Species", "Year")],
-                           mean)
-names(ba.error2)[4] <- "Density"
-
-ba.error3 <- aggregate(ba.all$Density,
-                            ba.all[,c("Stand", "Species", "Year")],
-                            sd)
-names(ba.error3)[4] <- "St.dev"
-
-ba.error <- merge(ba.error2, ba.error3)
-
-ba.error$Ymin <- ba.error$Density - ba.error$St.dev
-ba.error$Ymax <- ba.error$Density + ba.error$St.dev
 
 # --------------------------------------
 # Pretty graphs
@@ -207,24 +178,46 @@ ba.error$Ymax <- ba.error$Density + ba.error$St.dev
 
 library(ggplot2)
 
-colors <- c(ACSA = "#F8766D",
-            FRAM = "#AEA200", 
-            JUNI = "#FF63B6", 
-            OSVI = "#00BD5C", 
-            PRSE = "#B385FF", 
-            QUAL = "#00BADE", 
-            QUMA = "#00A6FF", 
-            QURU = "#00C1A7", 
-            TIAM = "#EF67EB", 
-            ULRU = "lightpink2", 
-            ACNI = "#53B400", 
-            CACO = "#AEA200", 
-            CR = "#DB8E00", 
-            POTR = "lightseagreen", 
-            UNKN = "lightpink4", 
-            unkn = "lightpink4")
+colors <- c(ACNI = "#FF67A4", #15
+            ACSA = "#F8766D", #1 keep
+            AC = "#F8766D",
+            CACO = "#FD61D1", #14
+            CA = "#FD61D1",
+            CR   = "#E76BF3", #13
+            FRAM = "#E58700", #2
+            FR = "#E58700",
+            JUNI = "#6BB100", #5
+            JU = "#6BB100",
+            OSVI = "#00C0AF", #8
+            OS = "#00C0AF",
+            POTR = "#00BF7D", #7
+            PO = "#00BF7D",
+            PRSE = "#B983FF", #12 keep
+            PR = "#B983FF",
+            QUAL = "#619CFF", #11
+            QUMA = "#00BCD8", #9
+            QURU = "#00B0F6", #10
+            QU = "#619CFF",
+            TIAM = "#00BA38", #6
+            TI = "#00BA38",
+            ULRU = "#A3A500", #4
+            UL = "#A3A500",
+            UNKN = "#C99800", #3
+            UN = "#C99800",
+            unkn = "#C99800") #3
 
-# Don't like
+# Stuff to test colors
+#
+#test1 <- c(5, 6, 7, 5, 7, 6, 7, 5, 5, 6, 5, 4, 7, 5, 7)
+#test2 <- c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15")
+#test <- data.frame(test1, test2)
+#
+#ggplot(test, aes(fill=test2)) +
+#  geom_col(aes(test2, test1)) +
+#  
+#  ggplot_build(ggplot(test, aes(fill=test2)) +
+#                 geom_col(aes(test2, test1)))$data
+#
 
 # Canopy Distributions based on plot
 
@@ -247,29 +240,15 @@ ggplot(tree.data) +
 # Tree distribution based on plot
 
 ggplot(alltree.data) +
-  geom_point(aes(x=X, y=Y, color=Sp_code, size=DBH)) +
-  facet_wrap(~ Plot)
-
-ggplot(alltree.data) +
   geom_point(aes(x=X, y=Y, color=Sp_code, size=BA)) +
   facet_wrap(~ Plot) 
-
-ggplot(alltree.data) +
-  geom_point(aes(x=X, y=Y, color="blue", size=BA)) +
-  geom_point(aes(x=X, y=Y, color="red", size=DBH)) +
-  facet_wrap(~ Plot)
 
 # Correlation between diameter and height
 
 ggplot(alltree.data, aes(x=DBH, y=Height)) +
   geom_point(aes(color=Sp_code)) 
 
-# Species basal area per plot from old and new data
-
-ggplot(oldba.data.subset2, aes(fill=Species)) +
-  geom_col(aes(Species, Density)) +
-  facet_wrap(~ Plot) +
-  scale_fill_manual(values = colors)
+# Species basal area per plot from new data
 
 ggplot(newba.data, aes(fill=Species)) +
   geom_col(aes(Species, Density)) +
@@ -285,39 +264,14 @@ ggplot(newba.data, aes(fill=Species)) +
 ggplot(ba.all, aes(fill=Species)) +
   geom_col(aes(Species, Density)) +
   facet_grid(Year ~ Stand, scales="free") +
-  scale_fill_manual(values = colors)
-
-# Graphing error bars for the density in 2011 stands
-
-ggplot(ba.error, aes(fill=Species)) +
-  facet_grid(Year ~ Stand, scales="free_x") +
-  geom_col(aes(Species, Density)) +
-  geom_errorbar(aes(x=Species, ymin=Ymin, ymax=Ymax), na.rm = TRUE)
-
-# Showing only top half of the error bars, looks better, less accurate
-
-ggplot(ba.error, aes(fill=Species)) +
-  geom_errorbar(aes(x=Species, ymin=Density, ymax=Ymax), na.rm = TRUE) +
-  facet_grid(Year ~ Stand, scales="free_x") +
-  geom_col(aes(Species, Density)) +
   theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
   scale_fill_manual(values = colors)
 
-# Combined all oak species
-
-ba.error.test <- ba.error
-ba.error.test$Species <- as.factor(substr(ba.error.test$Species, 1, 2))
-
-ggplot(ba.error.test, aes(fill=Species)) +
-  facet_grid(Year ~ Stand, scales="free_x") +
-  geom_col(aes(Species, Density)) +
-  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
-
-# Using a boxplot rather than error bars
+# Using a boxplot to compare
 
 ggplot(ba.all, aes(fill=Species)) +
-  geom_boxplot(data=ba.all[ba.all$Year==2011,],aes(x=Species, y=Density)) +
-  geom_point(data=ba.all[ba.all$Year==2017,],aes(x=Species, y=Density), color="yellow") +
+  geom_boxplot(data=ba.all[ba.all$Year==2011,],aes(x=Species, y=Density, alpha =.2)) +
+  geom_point(data=ba.all[ba.all$Year==2017,],aes(x=Species, y=Density)) +
   facet_grid(. ~ Stand, scales="free_x") +
   theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
   scale_fill_manual(values = colors)
@@ -327,7 +281,8 @@ ggplot(ba.all, aes(fill=Species)) +
 ggplot(old.density, aes(fill=Species)) +
   geom_boxplot(aes(x=Species, y=Stem.count)) +
   facet_grid(. ~ Stand, scales="free_x") +
-  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  scale_fill_manual(values=colors)
 
 # Comparing stem count per plot per year with boxplots
 
@@ -335,7 +290,8 @@ ggplot(density.all, aes(fill=Species)) +
   geom_boxplot(data=density.all[density.all$Year==2011,],aes(x=Species, y=Stem.count, alpha = .2)) +
   geom_point(data=density.all[density.all$Year==2017,],aes(x=Species, y=Stem.count), color="black") +
   facet_grid(. ~ Stand, scales="free_x") +
-  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  scale_fill_manual(values=colors)
 
 # --------------------------------------
 # Finding more plots to collect more oak data
@@ -354,22 +310,24 @@ old.density.sub <- old.density
 old.density.sub$Species <- as.factor(substr(old.density.sub$Species, 1, 2))
 
 old.density.oak <- aggregate(old.density.sub["Stem.count"],
-                       old.density.sub[, c("Species", "Plot", "Stand")],
-                       sum)
+                             old.density.sub[, c("Species", "Plot", "Stand")],
+                             sum)
 
 # --------------------------------------
 
-# Stand A, Plot: O109, O121, R109; R113, N113,, O108, O105 (N115)
+# Stand A, Plot: O109, O121, R109 (N115)
 
 ggplot(oldba.oak, aes(fill=Species)) +
   geom_boxplot(data=oldba.oak[oldba.oak$Stand=="A",], aes(x=Species, y=Density, alpha = .5)) +
   geom_point(data=oldba.oak[oldba.oak$Stand=="A",], aes(x=Species, y=Density, color=Plot), position=position_jitter(width=.2, height=0)) +
-  guides(fill=FALSE)
+  guides(fill=FALSE) +
+  scale_fill_manual(values=colors)
 
 ggplot(old.density.oak, aes(fill=Species)) +
   geom_boxplot(data=old.density.oak[old.density.oak$Stand=="A",], aes(x=Species, y=Stem.count, alpha = .5)) +
   geom_point(data=old.density.oak[old.density.oak$Stand=="A",], aes(x=Species, y=Stem.count, color=Plot), position=position_jitter(width=.2, height=0)) +
-  guides(fill=FALSE)
+  guides(fill=FALSE) +
+  scale_fill_manual(values=colors)
 
 # --------------------------------------
 
@@ -378,65 +336,65 @@ ggplot(old.density.oak, aes(fill=Species)) +
 ggplot(oldba.oak, aes(fill=Species)) +
   geom_boxplot(data=oldba.oak[oldba.oak$Stand=="B",], aes(x=Species, y=Density, alpha = .5)) +
   geom_point(data=oldba.oak[oldba.oak$Stand=="B",], aes(x=Species, y=Density, color=Plot), position=position_jitter(width=.2, height=0)) +
-  guides(fill=FALSE)
+  guides(fill=FALSE) +
+  scale_fill_manual(values=colors)
 
 ggplot(old.density.oak, aes(fill=Species)) +
   geom_boxplot(data=old.density.oak[old.density.oak$Stand=="B",], aes(x=Species, y=Stem.count, alpha = .5)) +
   geom_point(data=old.density.oak[old.density.oak$Stand=="B",], aes(x=Species, y=Stem.count, color=Plot), position=position_jitter(width=.2, height=0)) +
-  guides(fill=FALSE)
+  guides(fill=FALSE) +
+  scale_fill_manual(values=colors)
 
-# All have one oak, probably should core more plots
 
 # --------------------------------------
 
-# Stand C, Plot: HH112, MM114, LL114; SS113,, FF117, HH116, II118 (HH115)
+# Stand C, Plot: HH112, MM114, LL114 (HH115)
 
 ggplot(oldba.oak, aes(fill=Species)) +
   geom_boxplot(data=oldba.oak[oldba.oak$Stand=="C",], aes(x=Species, y=Density, alpha = .5)) +
   geom_point(data=oldba.oak[oldba.oak$Stand=="C",], aes(x=Species, y=Density, color=Plot), position=position_jitter(width=.2, height=0)) +
-  guides(fill=FALSE)
+  guides(fill=FALSE) +
+  scale_fill_manual(values=colors)
 
 ggplot(old.density.oak, aes(fill=Species)) +
   geom_boxplot(data=old.density.oak[old.density.oak$Stand=="C",], aes(x=Species, y=Stem.count, alpha = .5)) +
   geom_point(data=old.density.oak[old.density.oak$Stand=="C",], aes(x=Species, y=Stem.count, color=Plot), position=position_jitter(width=.2, height=0)) +
-  guides(fill=FALSE)
+  guides(fill=FALSE) +
+  scale_fill_manual(values=colors)
 
 # --------------------------------------
 
-# Stand D, Plot: D123, A128, C123; C120,, F118 (B127)
+# Stand D, Plot: D123, A128, C123 (B127)
 
 ggplot(oldba.oak, aes(fill=Species)) +
   geom_boxplot(data=oldba.oak[oldba.oak$Stand=="D",], aes(x=Species, y=Density, alpha = .5)) +
   geom_point(data=oldba.oak[oldba.oak$Stand=="D",], aes(x=Species, y=Density, color=Plot), position=position_jitter(width=.2, height=0)) +
-  guides(fill=FALSE)
+  guides(fill=FALSE) +
+  scale_fill_manual(values=colors)
 
 ggplot(old.density.oak, aes(fill=Species)) +
   geom_boxplot(data=old.density.oak[old.density.oak$Stand=="D",], aes(x=Species, y=Stem.count, alpha = .5)) +
   geom_point(data=old.density.oak[old.density.oak$Stand=="D",], aes(x=Species, y=Stem.count, color=Plot), position=position_jitter(width=.2, height=0)) +
-  guides(fill=FALSE)
+  guides(fill=FALSE) +
+  scale_fill_manual(values=colors)
 
 # --------------------------------------
 
-# For testing plot points
+# Stem count in the additional plots sorted by stand using the 2011 data
 
-ggplot(oldba.oak, aes(fill=Species)) +
-  geom_boxplot(data=oldba.oak[oldba.oak$Stand=="D",], aes(x=Species, y=Density, alpha = .5)) +
-  geom_point(data=oldba.oak[oldba.oak$Plot=="D123",], aes(x=Species, y=Density, color=Plot), position=position_jitter(width=.2, height=0)) +
-  guides(fill=FALSE)
+new.plots <- c("O109", "O121", "R109", "M134", "T132", "O136", "HH112", "MM114", "LL114", "D123", "A128", "C123")
 
+old.density.plot <- old.density.oak[old.density.oak$Plot %in% new.plots,]
 
+ggplot(old.density.plot, aes(fill=Species))+
+  geom_col(aes(Plot, Stem.count))+
+  scale_fill_manual(values=colors) +
+  facet_wrap(~ Stand, scales="free_x")
 
+# --------------------------------------
 
-
-
-# Choose plots that had average oak basal area for their stand
-# What about higher stem density?
-
-# Idenstify 2 or 3 more plots per stand
-# how, number of oaks, which plots
-
-# Choose colors
-
+# Edit colors so OSVI doesn't look so much like QUMA
+# Probably can use half shades, i.e. transparency 
 
 
 
