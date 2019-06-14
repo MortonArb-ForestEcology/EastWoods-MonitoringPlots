@@ -23,7 +23,7 @@ library(ggplot2); library(dplyr); library("ggpubr")
 
 
 #Plotting raw total mass of all tissues by species
-png(file = "~/GitHub/EastWoods_LeafLitter/Figures//LL_TotalMassAllTissue_BySpecies_IncludesOutliers.png")
+png(file = "~/GitHub/EastWoods-MonitoringPlots/LeafLitter/Figures//LL_TotalMassAllTissue_BySpecies_IncludesOutliers.png")
 ggboxplot(dat.ll, x = "plot", y = "mass_g", 
           color = "taxon",
           facet.by = "plot",
@@ -53,7 +53,7 @@ outlierReplace(dat.ll, "mass_g", which(dat.ll$mass_g > 50), NA)
 
 #Replotting after outlier removal
 
-png("~/GitHub/EastWoods_LeafLitter/Figures//LL_TotalMassofAllTissueByPlot.png")
+png("~/GitHub/EastWoods-MonitoringPlots/LeafLitter/Figures//LL_TotalMassofAllTissueByPlot.png")
 ggboxplot(dat.ll, x = "plot", y = "mass_g", 
           color = "plot",
           ylab = "Mass (g)", xlab = "Plot",
@@ -62,7 +62,7 @@ ggboxplot(dat.ll, x = "plot", y = "mass_g",
   theme(plot.title = element_text(hjust=0.5))
 dev.off()
 
-png("~/GitHub/EastWoods_LeafLitter/Figures//LL_TotalMassAllTissue_BySpecies_DiscardOutliers.png")
+png("~/GitHub/EastWoods-MonitoringPlots/LeafLitter/Figures//LL_TotalMassAllTissue_BySpecies_DiscardOutliers.png")
 ggboxplot(dat.ll, x = "plot", y = "mass_g", 
           color = "taxon",
           facet.by = "plot",
@@ -75,7 +75,7 @@ dev.off()
 
 
 
-png("~/GitHub/EastWoods_LeafLitter/Figures//LL_TotalMassofAllTissueByTissueType.png")
+png("~/GitHub/EastWoods-MonitoringPlots/LeafLitter/Figures//LL_TotalMassofAllTissueByTissueType.png")
 ggboxplot(dat.ll, x = "plot", y = "mass_g", 
           color = "tissue",
           ylab = "Mass (g)", xlab = "Plot",
@@ -99,7 +99,7 @@ dat.ll.leaf <- dat.ll[dat.ll$tissue=="leaf",]
 
 summary(dat.ll.leaf)
 
-png("~/GitHub/EastWoods_LeafLitter/Figures//LL_TotalMass_LeavesOnly.png")
+png("~/GitHub/EastWoods-MonitoringPlots/LeafLitter/Figures//LL_TotalMass_LeavesOnly.png")
 ggboxplot(dat.ll.leaf, x = "taxon", y = "mass_g", 
           color = "taxon",
           facet.by = "plot",
@@ -109,10 +109,20 @@ ggboxplot(dat.ll.leaf, x = "taxon", y = "mass_g",
   theme(axis.text.x = element_text(angle=70, hjust=1, size = 10))+
   theme(plot.title = element_text(hjust=0.5)) +
   facet_wrap(~plot, scales = "free")
-
+dev.off()
           
 tapply(dat.ll.leaf$mass_g, dat.ll.leaf$plot, mean)
 tapply(dat.ll.leaf$mass_g, dat.ll.leaf$plot, sd)
 res.aov <- aov(mass_g ~ plot, data = dat.ll.leaf)
 summary(res.aov)
+
+png("~/GitHub/EastWoods-MonitoringPlots/LeafLitter/Figures//LL_LeavesOnly_PlotComparison.png")
+ggboxplot(dat.ll.leaf, x = "plot", y = "mass_g", 
+          color = "plot",
+          ylab = "Mass (g)", xlab = "Plot",
+          title = "(Raw) Total Leaf Mass By Plot Sept2018-Jan2019",
+          legend = "none")+
+  theme(plot.title = element_text(hjust=0.5))
+dev.off()
+
 
