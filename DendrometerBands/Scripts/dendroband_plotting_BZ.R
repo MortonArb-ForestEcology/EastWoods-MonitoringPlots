@@ -3,12 +3,12 @@ library(scales)
 library(dplyr)
 library("ggpubr")
 
+#Reading in data and formatting dates
+setwd("~/GitHub/EastWoods-MonitoringPlots/DendrometerBands/Raw_data")
+dendroband <- read.csv("DendrobandObservations_EastWoods.csv", na.strings=c("", "negative", "9999.00", "999.00","9999", "999")) #read in data file
+dendroband$date_observed <- as.Date(dendroband$date_observed, format="%m/%d/%Y") #Format dates as dates
 
-setwd("~/GitHub/Dendrobands/Scripts")
-dendroband <- read.csv("~/GitHub/Dendrobands/Raw_Data//DendrobandObservations_EastWoods.csv", na.strings=c("", "negative", "9999.00", "999.00","9999", "999")) #read in data file
-dendroband$date_observed <- as.Date(dendroband$date_observed, format="%m/%d/%Y") #Format dates as dates Not working anymore, but doesn't seem to be needed
-#dendroband$date_observed <- factor(dendroband$date_observed) #Format dates as dates
-
+#Changing species names for easier graphing
 dendroband$taxon <- dendroband$species
 dendroband$taxon <- recode(dendroband$species, alba = "Q. alba", 
               americana = "T. americana", 
@@ -19,6 +19,7 @@ dendroband$taxon <- recode(dendroband$species, alba = "Q. alba",
               serotina = "P. serotina",
               virginiana = "O. virginiana")
 
+#summarizing data and data types
 summary(dendroband) 
 str(dendroband)
 
@@ -73,15 +74,21 @@ for (id in unique(dendroband$id)){ #for each tree
   
 }
 
+#2017 data was noisy. Creating subset starting at 2018
 dendroband$date_observed <- as.POSIXct(dendroband$date_observed, format="%Y-%m-%d")
 after2017 <- subset(dendroband, date_observed > "2018-01-01")
 
 
+##############
 
 #Plot distance
 
+##############
+
+
+
 #Plotting total distance by species 2017-2019
-png("~/GitHub/Dendrobands/Figures//EWDendoband_TotalDistanceFromCollar_2017-2019.png")
+png("~/GitHub/EastWoods-MonitoringPlots/DendrometerBands/Figures//EWDendoband_TotalDistanceFromCollar_2017-2019.png")
 ggplot(data=dendroband[!is.na(dendroband$dist_from_collar),]) + #Set basic plot parameters
   geom_point(aes(x=date_observed, y=dist_from_collar, group = id, col = as.factor(id)), size=1) + #Add points
   geom_line(aes(x=date_observed, y=dist_from_collar, group = id, col = as.factor(id)), size=.9) + #Specify line graph
@@ -96,7 +103,7 @@ ggplot(data=dendroband[!is.na(dendroband$dist_from_collar),]) + #Set basic plot 
 dev.off()
 
 #Plotting distance by plot 2017-2019
-png("~/GitHub/Dendrobands/Figures//EWDendoband_TotalDistanceFromCollar_byPlot_2017-2019.png")
+png("~/GitHub/EastWoods-MonitoringPlots/DendrometerBands/Figures//EWDendoband_TotalDistanceFromCollar_byPlot_2017-2019.png")
 ggplot(data=dendroband[!is.na(dendroband$dist_from_collar),]) + #Set basic plot parameters
   geom_point(aes(x=date_observed, y=dist_from_collar, group = id, col = as.factor(id)), size=1) + #Add points
   geom_line(aes(x=date_observed, y=dist_from_collar, group = id, col = as.factor(id)), size=.9) + #Specify line graph
@@ -115,7 +122,7 @@ dev.off()
 
 
 #Plotting total distance by species 2018-2019
-png("~/GitHub/Dendrobands/Figures//EWDendoband_TotalDistanceFromCollar_2018-2019.png")
+png("~/GitHub/EastWoods-MonitoringPlots/DendrometerBands/Figures//EWDendoband_TotalDistanceFromCollar_2018-2019.png")
 ggplot(data=after2017[!is.na(after2017$dist_from_collar),]) + #Set basic plot parameters
   geom_point(aes(x=date_observed, y=dist_from_collar, group = id, col = as.factor(id)), size=1) + #Add points
   geom_line(aes(x=date_observed, y=dist_from_collar, group = id, col = as.factor(id)), size=.9) + #Specify line graph
@@ -130,7 +137,7 @@ ggplot(data=after2017[!is.na(after2017$dist_from_collar),]) + #Set basic plot pa
 dev.off()
 
 #Plotting distance by plot 2018-2019
-png("~/GitHub/Dendrobands/Figures//EWDendoband_TotalDistanceFromCollar_byPlot_2018-2019.png")
+png("~/GitHub/EastWoods-MonitoringPlots/DendrometerBands/Figures//EWDendoband_TotalDistanceFromCollar_byPlot_2018-2019.png")
 ggplot(data=after2017[!is.na(after2017$dist_from_collar),]) + #Set basic plot parameters
   geom_point(aes(x=date_observed, y=dist_from_collar, group = id, col = as.factor(id)), size=1) + #Add points
   geom_line(aes(x=date_observed, y=dist_from_collar, group = id, col = as.factor(id)), size=.9) + #Specify line graph
@@ -144,7 +151,8 @@ ggplot(data=after2017[!is.na(after2017$dist_from_collar),]) + #Set basic plot pa
   facet_wrap(~plot, scales = "free") #Specify panels
 dev.off()
 
-png("~/GitHub/Dendrobands/Figures//EWDendoband_TotalDistancefromCollar_Boxplot_ByPlot.png")
+#Boxplot showing total distance from collar by each plot for 2018-2019
+png("~/GitHub/EastWoods-MonitoringPlots/DendrometerBands/Figures//EWDendoband_TotalDistancefromCollar_Boxplot_ByPlot.png")
 ggboxplot(after2017, x = "plot", y = "dist_from_collar", 
           color = "plot",
           legend = "none",
@@ -154,8 +162,8 @@ ggboxplot(after2017, x = "plot", y = "dist_from_collar",
 dev.off()
 
 
-
-png("~/GitHub/Dendrobands/Figures//EWDendoband_TotalDistancefromCollar_Boxplot_PlotVsSpecies.png")
+#Boxplot showing how each species compares across plots
+png("~/GitHub/EastWoods-MonitoringPlots/DendrometerBands/Figures//EWDendoband_TotalDistancefromCollar_Boxplot_PlotVsSpecies.png")
 ggboxplot(after2017, x = "plot", y = "dist_from_collar", 
           color = "taxon",
           legend = "none",
@@ -165,7 +173,8 @@ ggboxplot(after2017, x = "plot", y = "dist_from_collar",
   theme(legend.position = "none", plot.title = element_text(hjust=0.5)) #Specify panels
 dev.off()
 
-png("~/GitHub/Dendrobands/Figures//EWDendoband_TotalDistancefromCollar_Boxplot_ByPlot.png")
+#Showing within plot comparisons of species
+png("~/GitHub/EastWoods-MonitoringPlots/DendrometerBands/Figures//EWDendoband_TotalDistancefromCollar_Boxplot_ByPlot.png")
 ggboxplot(after2017, x = "plot", y = "dist_from_collar", 
           color = "taxon",
           legend = "none",
@@ -176,7 +185,15 @@ ggboxplot(after2017, x = "plot", y = "dist_from_collar",
 dev.off()
 
 
+
+
+####################
+
 #Plot growth in mm/day
+
+####################
+
+#Changing species names for easier graphing
 growth_df1$taxon <- growth_df1$species
 growth_df1$taxon <- recode(growth_df1$species, alba = "Q. alba", 
                            americana = "T. americana", 
@@ -186,12 +203,14 @@ growth_df1$taxon <- recode(growth_df1$species, alba = "Q. alba",
                            saccharum = "A. saccharum",
                            serotina = "P. serotina",
                            virginiana = "O. virginiana")
-
+#subsetting data for 2018-2019
 growth_df2 <- na.omit(growth_df1)
 growth_df2$date_observed <- as.POSIXct(growth_df2$date_observed, format="%Y-%m-%d")
 growth_df3 <- subset(growth_df2, date_observed > "2018-01-01")
 
-png("~/GitHub/Dendrobands/Figures//EWDendoband_GrowthPerDay2018-2019_Boxplot_PlotsvsSpecies.png")
+
+#Boxplot showing total growth per day compared across plots
+png("~/GitHub/EastWoods-MonitoringPlots/DendrometerBands/Figures//EWDendoband_GrowthPerDay2018-2019_Boxplot_PlotsvsSpecies.png")
 ggboxplot(growth_df3, x = "plot", y = "mm_day", 
           color = "plot",
           legend = "none",
@@ -200,7 +219,9 @@ ggboxplot(growth_df3, x = "plot", y = "mm_day",
   theme(legend.position = "none", plot.title = element_text(hjust=0.5)) #Specify panels
 dev.off()
 
-png("~/GitHub/Dendrobands/Figures//EWDendoband_GrowthPerDay2018-2019_Boxplot_PlotsvsSpecies.png")
+
+#Showing comparison of growth per day from 2018-2019 of species across plots
+png("~/GitHub/EastWoods-MonitoringPlots/DendrometerBands/Figures//EWDendoband_GrowthPerDay2018-2019_Boxplot_PlotsvsSpecies.png")
 ggboxplot(growth_df3, x = "plot", y = "mm_day", 
           color = "taxon",
           legend = "none",
@@ -216,7 +237,9 @@ tapply(growth_df3$mm_day, growth_df3$plot, sd)
 res.aov <- aov(mm_day ~ plot, data = growth_df2)
 summary(res.aov)
 
-png("~/GitHub/Dendrobands/Figures//EWDendoband_GrowthPerDay_2017-2019_BySpecies.png")
+
+# Growth per day from 2017-2019
+png("~/GitHub/EastWoods-MonitoringPlots/DendrometerBands/Figures//EWDendoband_GrowthPerDay_2017-2019_BySpecies.png")
 ggplot(data=growth_df2) + #Set basic plot parameters
   geom_point(aes(x=date_observed, y=mm_day, group = id, col = as.factor(id)), size=1) + #Add points
   geom_line(aes(x=date_observed, y=mm_day, group = id, col = as.factor(id)), size=.9) + #Specify line graph
@@ -230,7 +253,9 @@ ggplot(data=growth_df2) + #Set basic plot parameters
 #scale_y_continuous(breaks=c(0.00, 5.00, 10.00)) #Set y axis scale
 dev.off()
 
-png("~/GitHub/Dendrobands/Figures//EWDendoband_GrowthPerDay_2018-2019_BySpecies.png")
+
+# Growth per day for subset from 2018-2019
+png("~/GitHub/EastWoods-MonitoringPlots/DendrometerBands/Figures//EWDendoband_GrowthPerDay_2018-2019_BySpecies.png")
 ggplot(data=growth_df3) + #Set basic plot parameters
   geom_point(aes(x=date_observed, y=mm_day, group = id, col = as.factor(id)), size=1) + #Add points
   geom_line(aes(x=date_observed, y=mm_day, group = id, col = as.factor(id)), size=.9) + #Specify line graph
