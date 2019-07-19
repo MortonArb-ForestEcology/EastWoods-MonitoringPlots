@@ -140,7 +140,7 @@ This script takes the raw met data exported from micro-meteorology stations loca
 This script takes the output file from the MetData_ConsolidatingRawData.R script and uses it to run QAQC analyses. 
 
 #### Dendrometer
-1. **dendroband_plotting_BZ.R**
+1. **dendroband_plotting_EW.R**
 This script uses data from dendrometer bands on trees within plots established in the East Woods of The Morton Arboretum.  It calculates basal area then converts for growth (mm/day). This script also plots the total movement of the band away from the collar.
 2. **maps_dendrometer_bands_eastwoods.R**
 This script creates a map of trees with dendrometer bands on them within plots in the East Woods at The Morton Arboretum.
