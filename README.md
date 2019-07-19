@@ -120,7 +120,7 @@ The following variables are available in our data (code, description, units):
 ### Tree Survey
 Note: To add in
 ### Plot Survey
-
+Note: To add in
 
 
 ********
@@ -134,13 +134,21 @@ If you're looking for the nuts & bolts of how each step is done, these are the s
 ### Description of Workflow Scripts/Steps
 
 #### Meteorology
-1. **MetData_ConsolidatingRawData.R** 
-
+1. **MetData_ConsolidatingRawData.R**
+This script takes the raw met data exported from micro-meteorology stations located in four plots in the East Woods of The Morton Arboretum.  This script takes the raw exported HoboWare data from each of the four plots and compiles them into one datasheet.
 2. **Met_QAQC.R**
+This script takes the output file from the MetData_ConsolidatingRawData.R script and uses it to run QAQC analyses. 
+
 #### Dendrometer
 1. **dendroband_plotting_BZ.R**
-
+This script uses data from dendrometer bands on trees within plots established in the East Woods of The Morton Arboretum.  It calculates basal area then converts for growth (mm/day). This script also plots the total movement of the band away from the collar.
 2. **maps_dendrometer_bands_eastwoods.R**
+This script creates a map of trees with dendrometer bands on them within plots in the East Woods at The Morton Arboretum.
+3. **maps_dendrometer_bands.R**
+This script creates a map of trees with dendrometer bands on them in the Oak Collection at The Morton Arboretum.
+4. **dendroband_plotting.R**
+This script was the original plotting script that is not currently in use.
+
 #### Leaf Litter
 1. **LeafLitter.R**
 This script extracts data from [Google Sheets document](https://docs.google.com/spreadsheets/d/1d7Py4ehN2PmrmKmyv2hDUkX4fWa95xdlQlGVBN9x20g/edit#gid=0) and runs initial QAQC on data.
