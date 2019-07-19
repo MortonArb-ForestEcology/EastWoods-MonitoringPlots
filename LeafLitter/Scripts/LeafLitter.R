@@ -1,5 +1,4 @@
 #Reading in data
-
 library(googlesheets)
 ll.df <- gs_title("Leaf_Litter_Data")
 dat.ll <- data.frame(gs_read(ll.df, ws="raw_data"))
@@ -11,7 +10,7 @@ for(i in 1:ncol(dat.ll)){
 summary(dat.ll)
 
 
-#Some initial information
+#Some initial information on the data
 nrow(dat.ll) # Number of observations
 range(dat.ll$date_collection) # Date range (note: incomplete at moment)
 length(unique(dat.ll$species)) # Number of species observed (assuming no typos)
@@ -53,6 +52,8 @@ outlierReplace(dat.ll, "mass_g", which(dat.ll$mass_g > 50), NA)
 
 #Replotting after outlier removal
 
+
+#Total mass of all tissue by facet by plot
 png("~/GitHub/EastWoods-MonitoringPlots/LeafLitter/Figures//LL_TotalMassofAllTissueByPlot.png")
 ggboxplot(dat.ll, x = "plot", y = "mass_g", 
           color = "plot",
@@ -62,10 +63,11 @@ ggboxplot(dat.ll, x = "plot", y = "mass_g",
   theme(plot.title = element_text(hjust=0.5))
 dev.off()
 
+#Total mass of all tissue by facet by species
 png("~/GitHub/EastWoods-MonitoringPlots/LeafLitter/Figures//LL_TotalMassAllTissue_BySpecies_DiscardOutliers.png")
 ggboxplot(dat.ll, x = "plot", y = "mass_g", 
           color = "taxon",
-          facet.by = "plot",
+          facet.by = "taxon",
           ylab = "Mass (g)", xlab = "Plot", 
           title = "(Raw) Total Mass of All Tissue Sep2018-Jan2019",
           legend = "right") +
@@ -74,7 +76,7 @@ ggboxplot(dat.ll, x = "plot", y = "mass_g",
 dev.off()
 
 
-
+#Total Mass by Tissue Type
 png("~/GitHub/EastWoods-MonitoringPlots/LeafLitter/Figures//LL_TotalMassofAllTissueByTissueType.png")
 ggboxplot(dat.ll, x = "plot", y = "mass_g", 
           color = "tissue",
@@ -93,12 +95,11 @@ res.aov <- aov(mass_g ~ plot, data = dat.ll)
 summary(res.aov)
 
 
-#Subsetting for leaf only
-
+####Subsetting for leaf only###
 dat.ll.leaf <- dat.ll[dat.ll$tissue=="leaf",]
-
 summary(dat.ll.leaf)
 
+#Total mass of leaf tissue by plot and species
 png("~/GitHub/EastWoods-MonitoringPlots/LeafLitter/Figures//LL_TotalMass_LeavesOnly.png")
 ggboxplot(dat.ll.leaf, x = "taxon", y = "mass_g", 
           color = "taxon",
@@ -116,6 +117,8 @@ tapply(dat.ll.leaf$mass_g, dat.ll.leaf$plot, sd)
 res.aov <- aov(mass_g ~ plot, data = dat.ll.leaf)
 summary(res.aov)
 
+
+##Total mass of leaf tissue across plots
 png("~/GitHub/EastWoods-MonitoringPlots/LeafLitter/Figures//LL_LeavesOnly_PlotComparison.png")
 ggboxplot(dat.ll.leaf, x = "plot", y = "mass_g", 
           color = "plot",
