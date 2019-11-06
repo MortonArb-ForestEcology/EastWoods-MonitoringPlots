@@ -23,7 +23,33 @@ dat.lit <- dat.lit %>% mutate(mass.sqrt = sqrt(mass_g),
 dat.lit <- dat.lit[!is.na(dat.lit$trap_ID),]
 
 #--------------------------#
-ggboxplot(dat.lit, x = "plot", y = "mass_g", 
+#pie table to visualize composition. Probabaly to be removed as it isnt useful
+pie <- ggplot(dat.lit, aes(x="", fill = factor(taxon)))+
+  geom_bar(width = 1)+
+  theme(axis.line = element_blank(),
+        plot.title = element_text(hjust=0.5))+
+  labs(fill="class", x=NULL,y=NULL)
+
+pie + coord_polar(theta = "y", start=0)
+
+#bar graph for frequency of taxon
+freqtable <- table(dat.lit$taxon)
+dat.freq <- as.data.frame.table(freqtable)
+dat.freq <- dat.freq[order(dat.freq$Freq),]
+dat.freq$Var1 <- factor(dat.freq$Var1, levels = dat.freq$Var1)
+
+ggplot(dat.freq, aes(Var1, Freq))+
+  geom_bar(stat="identity", width = 0.5, , fill = "tomato2")+
+  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))
+
+
+ggplot(dat.lit, aes(taxon))+
+  geom_bar(aes(fill=tissue), width=0.5)+
+  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))
+
+
+#boxplot to visualize differences
+ggboxplot(dat.lit, x = "taxon", y = "mass_g", 
           color = "taxon",
           facet.by = "plot",
           ylab = "Mass (g)", xlab = "Plot", 
@@ -33,16 +59,14 @@ ggboxplot(dat.lit, x = "plot", y = "mass_g",
   facet_wrap(~plot, scales = "free")
 
 #box plot with mass squared to look at outliers
-
-
-ggboxplot(dat.lit, x = "plot", y = "mass.sqrt", 
+ggboxplot(dat.lit, x = "taxon", y = "mass.sqrt", 
           color = "taxon",
           facet.by = "plot",
           ylab = "Sqaure root of Mass (g)", xlab = "Plot", 
           title = "(Raw) Sqaure root of Mass of All Tissue Sep2018-Aug2019",
           legend = "right") +
   theme(axis.text.x = element_blank(), plot.title = element_text(hjust=0.5))+
-  facet_wrap(~plot, scales = "free")
+  facet_wrap(~plot, scales = "fixed")
 
 #Mean, SD, and ANOVA (will need to change ANOVA) for mass across plots
 tapply(dat.lit$mass_g, dat.lit$plot, mean)
@@ -70,28 +94,28 @@ for(i in 1:ncol(dat.lit)){
 ggplot(dat.lit, aes(x=plot, y=tissue, alpha=mass_g))+
   facet_wrap(~taxon, scales = "fixed")+
   geom_tile()+
-  theme(axis.text.x = element_text(size=8, angle=60))+
+  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
   ggtitle("mass_g of species by plot and tissue type")
 
 #Plot for tissue presence of each taxon by plot
 ggplot(dat.lit, aes(x=plot, y=tissue))+
   facet_wrap(~taxon, scales = "free_y")+
   geom_count(aes(color=tissue))+
-  theme(axis.text.x = element_text(size=8, angle=60))+
+  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
   ggtitle("Tissue type for taxon by plot")
 
 #Plot for the taxons tissue type by plot
 ggplot(dat.lit, aes(x=taxon, y=tissue))+
   facet_wrap(~plot, scales = "free_y")+
   geom_jitter(aes(color=taxon))+
-  theme(axis.text.x = element_text(size=8, angle=60))+
+  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
   ggtitle("Taxon tissue type by plot")
 
 #Plots tissue by species over time for prevalence
 ggplot(dat.lit, aes(x=month, y=tissue, alpha=mass_g))+
   facet_wrap(~taxon, scales = "fixed")+
   geom_tile()+
-  theme(axis.text.x = element_text(size=8, angle=60))+
+  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
   ggtitle("Oak tissue by species over time")
 
 #----------------------------#
@@ -104,17 +128,25 @@ dat.fruit <- dat.fruit[!(dat.fruit$num_fruit == "multiple"),]
 dat.fruit <- dat.fruit %>% transform(num_fruit = as.numeric(dat.fruit$num_fruit),
                                      num_mature_fruit = as.numeric(dat.fruit$num_mature_fruit))
 
+#Plot of fruitmass of taxa by plot
+ggplot(dat.fruit, aes(x=taxon, y=mass_g))+
+  facet_wrap(~plot, scales = "fixed")+
+  geom_bar(stat="identity")+
+  theme(axis.text.x= element_text(angle=65, vjust=0.6))
+
+ggplot(dat.fruit, aes(mass.sqrt))+
+  geom_density(aes(fill=factor(genus)), alpha=0.8)
+
+
 #Graphs themselves
 ggplot(dat.fruit, aes(x=taxon, y=num_fruit))+
   facet_wrap(~plot)+
   geom_jitter(aes(color=taxon))
 
-ggboxplot(dat.fruit, x = "month", y = "num_fruit", 
-          color = "plot",
-          facet.by = "taxon",
-          legend = "right") +
+ggplot(dat.fruit, aes(taxon, mass.sqrt))+
+  geom_violin()+
   theme(axis.text.x = element_blank(), plot.title = element_text(hjust=0.5))+
-  facet_wrap(~taxon, scales = "free")
+  facet_wrap(~plot, scales = "free_y")
 
 #----------------------------#
 #Working with just oaks
@@ -127,34 +159,34 @@ dat.oaksum <- dat.oaksum %>% mutate(mass.sqrt = sqrt(mass_g),
 ggplot(dat.oaksum, aes(x=month, y=mass.sqrt))+
   facet_wrap(~taxon)+
   geom_jitter(aes(color=tissue))+
-  theme(axis.text.x = element_text(size=8, angle=60))
+  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))
 
 #plot for presence of oak tissue types at different plots
 ggplot(dat.oaksum, aes(x=plot, y=tissue, alpha=mass_g))+
   facet_wrap(~taxon, scales = "free_y")+
   geom_tile()+
-  theme(axis.text.x = element_text(size=8, angle=60))+
+  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
   ggtitle("mass_g of oak species by plot and tissue type")
 
 #Plot for the taxons tissue type by plot
 ggplot(dat.oaks, aes(x=taxon, y=tissue))+
   facet_wrap(~plot, scales = "free_y")+
   geom_jitter(aes(color=taxon))+
-  theme(axis.text.x = element_text(size=8, angle=60))+
+  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
   ggtitle("Oak tissue type by plot")
 
 #Plots tissue by species over time for prevalence
 ggplot(dat.oaks, aes(x=month, y=tissue, alpha=mass_g))+
   facet_wrap(~taxon, scales = "free_y")+
   geom_tile()+
-  theme(axis.text.x = element_text(size=8, angle=60))+
+  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
   ggtitle("Oak tissue by species over time")
 
 #Plots tissue by species over time for frequency
 ggplot(dat.oaks, aes(x=month, y=tissue))+
   facet_wrap(~taxon, scales = "free_y")+
   geom_jitter(aes(color=taxon))+
-  theme(axis.text.x = element_text(size=8, angle=60))+
+  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
   ggtitle("Oak tissue by species over time")
 
 #------------------------------#
@@ -167,19 +199,19 @@ dat.sum <- dat.sum %>% mutate(mass.sqrt = sqrt(mass_g),
 ggplot(dat.sum, aes(x=month, y=mass.sqrt))+
   facet_wrap(~tissue)+
   geom_point(aes(color=genus))+
-  theme(axis.text.x = element_text(size=8, angle=60))
+  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))
 
 #Plot for seeing changes in mass totals per species over time
 ggplot(dat.sum, aes(x=month, y=mass.sqrt))+
   facet_wrap(~taxon)+
   geom_jitter(aes(color=tissue))+
-  theme(axis.text.x = element_text(size=8, angle=60))
+  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))
 
 #Plot for seeing mass by genus per plot
 ggplot(dat.sum, aes(x=genus, y=mass.sqrt))+
   facet_wrap(~plot)+
   geom_point(aes(color=tissue))+
-  theme(axis.text.x = element_text(size=8, angle=60))
+  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))
 
 #-------------#
 #mass is summed by taxon exclusively for divergence calculation
