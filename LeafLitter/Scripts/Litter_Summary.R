@@ -194,3 +194,27 @@ ggplot(dat.taxmass, aes(x=taxon, y=mass_z, label=mass_z))+
   geom_text(color="white", size=2)+
   coord_flip()
 
+#----------------------------------------#
+#mass is summed by plot exclusively for divergence calculation
+dat.plotmass <- aggregate(mass_g~plot, data=dat.lit, mean)
+dat.plotmass$mass_z <- round((dat.plotmass$mass_g-mean(dat.plotmass$mass_g))/sd(dat.plotmass$mass_g),3)
+
+
+ggplot(dat.plotmass, aes(x=plot, y=mass_z, label=mass_z))+
+  geom_point(stat='identity', fill="black", size=8)+
+  geom_segment(aes(y=0, x = plot, yend=mass_z, xend=plot))+
+  geom_text(color="white", size=2)+
+  coord_flip()
+
+#------------------------------------#
+#mass is summed by date exclusively for divergence calculation
+dat.datemass <- aggregate(mass_g~date_collection, data=dat.lit, mean)
+dat.datemass$mass_z <- round((dat.datemass$mass_g-mean(dat.datemass$mass_g))/sd(dat.datemass$mass_g),3)
+
+
+ggplot(dat.datemass, aes(x=date_collection, y=mass_z, label=mass_z))+
+  geom_point(stat='identity', fill="black", size=8)+
+  geom_segment(aes(y=0, x = date_collection, yend=mass_z, xend=date_collection))+
+  geom_text(color="white", size=2)
+
+
