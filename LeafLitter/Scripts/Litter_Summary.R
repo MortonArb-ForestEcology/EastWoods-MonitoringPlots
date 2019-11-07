@@ -9,18 +9,27 @@ library(lubridate)
 litter.df <- gs_title("Leaf_Litter_Data")
 dat.lit <- data.frame(gs_read(litter.df, ws="raw_data"))
 
-for(i in 1:ncol(dat.lit)){
-  if(class(dat.lit[,i])=="character") dat.lit[,i] <- as.factor(dat.lit[,i])
-}
-
-str(dat.lit)
-
 #adding a sqaured mass column and month column for different explorations
 dat.lit <- dat.lit %>% mutate(mass.sqrt = sqrt(mass_g),
                               month = format(date_collection, format="%m/%d"))
 
 #removing NA values created by fact that volunteers record plot and date in advance of acquiring data
 dat.lit <- dat.lit[!is.na(dat.lit$trap_ID),]
+
+#Getting rid of huge outlier of heavy chunk of ash bark
+library(data.table)
+outlierReplace = function(dat.lit, cols, rows, newValue = NA) {
+  if (any(rows)) {
+    set(dat.lit, rows, cols, newValue)
+  }
+}
+outlierReplace(dat.lit, "mass_g", which(dat.lit$mass_g > 50), NA)
+
+#Mean, SD, and ANOVA (will need to change ANOVA) for mass across plots
+tapply(dat.lit$mass_g, dat.lit$plot, mean)
+tapply(dat.lit$mass_g, dat.lit$plot, sd)
+res.aov <- aov(mass_g ~ plot, data = dat.lit)
+summary(res.aov)
 
 #--------------------------#
 #pie table to visualize composition. Probabaly to be removed as it isnt useful
@@ -38,14 +47,19 @@ dat.freq <- as.data.frame.table(freqtable)
 dat.freq <- dat.freq[order(dat.freq$Freq),]
 dat.freq$Var1 <- factor(dat.freq$Var1, levels = dat.freq$Var1)
 
+#ordered bar chart for frequency of taxa
 ggplot(dat.freq, aes(Var1, Freq))+
   geom_bar(stat="identity", width = 0.5, , fill = "tomato2")+
   theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))
 
-
+#bar chart of frequency of tissue type by taxa
 ggplot(dat.lit, aes(taxon))+
   geom_bar(aes(fill=tissue), width=0.5)+
   theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))
+
+#bar chart of frequency of taxa at plot
+ggplot(dat.lit, aes(plot))+
+  geom_bar(aes(fill=taxon), width=0.5)
 
 
 #boxplot to visualize differences
@@ -67,27 +81,6 @@ ggboxplot(dat.lit, x = "taxon", y = "mass.sqrt",
           legend = "right") +
   theme(axis.text.x = element_blank(), plot.title = element_text(hjust=0.5))+
   facet_wrap(~plot, scales = "fixed")
-
-#Mean, SD, and ANOVA (will need to change ANOVA) for mass across plots
-tapply(dat.lit$mass_g, dat.lit$plot, mean)
-tapply(dat.lit$mass_g, dat.lit$plot, sd)
-res.aov <- aov(mass_g ~ plot, data = dat.lit)
-summary(res.aov)
-
-#Getting rid of huge outlier of heavy chunk of ash bark
-library(data.table)
-outlierReplace = function(dat.lit, cols, rows, newValue = NA) {
-  if (any(rows)) {
-    set(dat.lit, rows, cols, newValue)
-  }
-}
-outlierReplace(dat.lit, "mass_g", which(dat.lit$mass_g > 50), NA)
-
-#Total mass of all tissue by facet by species
-
-for(i in 1:ncol(dat.lit)){
-  if(class(dat.lit[,i])=="factor") dat.lit[,i] <- as.character(dat.lit[,i])
-}
 
 
 #Plot for mass of tissue type in each plot by taxon
@@ -116,7 +109,7 @@ ggplot(dat.lit, aes(x=month, y=tissue, alpha=mass_g))+
   facet_wrap(~taxon, scales = "fixed")+
   geom_tile()+
   theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
-  ggtitle("Oak tissue by species over time")
+  ggtitle("tissue by species over time")
 
 #----------------------------#
 #working with fruits
