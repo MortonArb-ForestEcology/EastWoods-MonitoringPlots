@@ -166,13 +166,12 @@ ggplot(dat.sum, aes(x=genus, y=mass_sum.sqrt))+
   geom_jitter(aes(color=genus))+
   theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))
 
-
 #----------------------------#
 #working with fruits
 dat.fruit <- dat.lit[!is.na(dat.lit$num_fruit),]
 
-#removing instances of characters in num_fruit. Will need to discuss how to deal with otherwise
-dat.fruit <- dat.fruit[!(dat.fruit$num_fruit == "multiple"),]
+#Converting instances of characters into an NA
+dat.fruit[,9][dat.fruit[, 9] =="multiple"] <- NA
 
 dat.fruit <- dat.fruit %>% transform(num_fruit = as.numeric(dat.fruit$num_fruit),
                                      num_mature_fruit = as.numeric(dat.fruit$num_mature_fruit))
@@ -190,7 +189,8 @@ ggplot(dat.fruit, aes(mass.sqrt))+
 #Graphs themselves
 ggplot(dat.fruit, aes(x=taxon, y=num_fruit))+
   facet_wrap(~plot)+
-  geom_jitter(aes(color=taxon))
+  geom_count(aes(color=taxon))+
+  theme(axis.text.x= element_text(angle=65, vjust=0.6))
 
 ggplot(dat.fruit, aes(taxon, mass.sqrt))+
   geom_violin()+
@@ -205,6 +205,11 @@ dat.oaksum <- aggregate(mass_g~date_collection+genus+species+taxon+plot+tissue, 
 dat.oaksum <- dat.oaksum %>% mutate(mass.sqrt = sqrt(mass_g),
                               month = format(date_collection, format="%m/%d"))
 
+dat.oakmean <- aggregate(mass_g~date_collection+taxon+tissue, data=dat.oaks, mean)
+dat.oakmean <- dat.oakmean %>% mutate(mass_mean.sqrt = sqrt(mass_g),
+                                month = format(date_collection, format="%m/%d"))
+colnames(dat.oakmean)[colnames(dat.oakmean)=='mass_g'] <- 'mass_mean'
+
 ggplot(dat.oaksum, aes(x=month, y=mass.sqrt))+
   facet_wrap(~taxon)+
   geom_jitter(aes(color=tissue))+
@@ -218,14 +223,14 @@ ggplot(dat.oaksum, aes(x=plot, y=tissue, alpha=mass_g))+
   ggtitle("mass_g of oak species by plot and tissue type")
 
 #Plot for the taxons tissue type by plot
-ggplot(dat.oaks, aes(x=taxon, y=tissue))+
-  facet_wrap(~plot, scales = "free_y")+
-  geom_jitter(aes(color=taxon))+
+ggplot(dat.oaks, aes(x=taxon, y=tissue, alpha=mass_g))+
+  facet_wrap(~plot, scales = "fixed")+
+  geom_tile(aes(color=taxon))+
   theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
   ggtitle("Oak tissue type by plot")
 
 #Plots tissue by species over time for prevalence
-ggplot(dat.oaks, aes(x=month, y=tissue, alpha=mass_g))+
+ggplot(dat.oakmean, aes(x=month, y=tissue, alpha=mass_mean))+
   facet_wrap(~taxon, scales = "free_y")+
   geom_tile()+
   theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
@@ -234,9 +239,28 @@ ggplot(dat.oaks, aes(x=month, y=tissue, alpha=mass_g))+
 #Plots tissue by species over time for frequency
 ggplot(dat.oaks, aes(x=month, y=tissue))+
   facet_wrap(~taxon, scales = "free_y")+
-  geom_jitter(aes(color=taxon))+
+  geom_count(aes(color=taxon))+
   theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
   ggtitle("Oak tissue by species over time")
+
+#-----------------------------------#
+#working with Trap_id for the plots
+dat.trapmean <- aggregate(mass_g~trap_ID+plot, data=dat.lit, mean)
+dat.trapmean <- dat.trapmean %>% mutate(mass_mean.sqrt = sqrt(mass_g))
+dat.trapmean$mass_z <- round((dat.trapmean$mass_g-mean(dat.trapmean$mass_g))/sd(dat.trapmean$mass_g),3)
+
+ggplot(dat.trapmean, aes(x=trap_ID, y=mass_z, label=mass_z))+
+  facet_wrap(~plot, scales = "free")+
+  geom_point(stat='identity', fill="black", size=8)+
+  geom_segment(aes(y=0, x = trap_ID, yend=mass_z, xend=trap_ID))+
+  geom_text(color="white", size=2)
+
+dat.traptax <- aggregate(mass_g~trap_ID+plot+taxon, data=dat.lit, mean)
+
+ggplot(dat.traptax, aes(x=trap_ID))+
+  facet_wrap(~plot, scales="free_x")+
+  geom_bar(aes(fill=taxon))
+
 
 
 #-------------#
@@ -266,13 +290,18 @@ ggplot(dat.plotmass, aes(x=plot, y=mass_z, label=mass_z))+
 
 #------------------------------------#
 #mass is summed by date exclusively for divergence calculation
-dat.datemass <- aggregate(mass_g~date_collection, data=dat.lit, mean)
+dat.datemass <- aggregate(mass_g~date_collection+month, data=dat.lit, mean)
 dat.datemass$mass_z <- round((dat.datemass$mass_g-mean(dat.datemass$mass_g))/sd(dat.datemass$mass_g),3)
 
 
 ggplot(dat.datemass, aes(x=date_collection, y=mass_z, label=mass_z))+
   geom_point(stat='identity', fill="black", size=8)+
   geom_segment(aes(y=0, x = date_collection, yend=mass_z, xend=date_collection))+
+  geom_text(color="white", size=2)
+
+ggplot(dat.datemass, aes(x=month, y=mass_z, label=mass_z))+
+  geom_point(stat='identity', fill="black", size=8)+
+  geom_segment(aes(y=0, x = month, yend=mass_z, xend=month))+
   geom_text(color="white", size=2)
 
 
