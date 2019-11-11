@@ -120,9 +120,8 @@ ggplot(dat.lit, aes(x=taxon, y=tissue, alpha=mass_g))+
   ggtitle("mass_g of Taxa by tissue type and plot")
 
 #Tile Plot tissue by species over time for prevalence
-ggplot(dat.lit, aes(x=month, y=tissue, alpha=mass_g))+
-  facet_wrap(~taxon, scales = "fixed")+
-  geom_tile(aes(color=tissue))+
+ggplot(dat.lit, aes(x=month, y=taxon, alpha=mass_g))+
+  geom_tile(aes(color=taxon))+
   theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
   ggtitle("mass_g of tissue by species over time")
 
@@ -182,14 +181,14 @@ dat.fruit[,9][dat.fruit[, 9] =="multiple"] <- NA
 dat.fruit <- dat.fruit %>% transform(num_fruit = as.numeric(dat.fruit$num_fruit),
                                      num_mature_fruit = as.numeric(dat.fruit$num_mature_fruit))
 
-rows=1
-for(i in rows:nrow(dat.fruit)){
-  if(!is.na(dat.fruit[rows, 'num_fruit'])){
-    dat.fruit[rows, 'num_immature_fruit'] = ifelse(is.na(dat.fruit[rows, 'num_immature_fruit']),0,dat.fruit[rows, 'num_immature_fruit'])
-    dat.fruit[rows, 'num_mature_fruit'] = ifelse(is.na(dat.fruit[rows, 'num_mature_fruit']),0,dat.fruit[rows, 'num_mature_fruit'])
-  }
-  rows=rows+1
-}
+#rows=1
+#for(i in rows:nrow(dat.fruit)){
+#  if(!is.na(dat.fruit[rows, 'num_fruit'])){
+#    dat.fruit[rows, 'num_immature_fruit'] = ifelse(is.na(dat.fruit[rows, 'num_immature_fruit']),0,dat.fruit[rows, 'num_immature_fruit'])
+#    dat.fruit[rows, 'num_mature_fruit'] = ifelse(is.na(dat.fruit[rows, 'num_mature_fruit']),0,dat.fruit[rows, 'num_mature_fruit'])
+#  }
+#  rows=rows+1
+#}
 
 #Plot of fruitmass of taxa by plot
 ggplot(dat.fruit, aes(x=taxon, y=mass_g))+
@@ -366,4 +365,35 @@ ggplot(dat.datemass, aes(x=month, y=mass_z, label=mass_z))+
   geom_segment(aes(y=0, x = month, yend=mass_z, xend=month))+
   geom_text(color="white", size=2)
 
+#--------------------------------------------------#
+#orders by date collection
+dat.leaf <- dat.leaf[order(dat.leaf$date_collection),]
+dat.leafdate <- aggregate(mass_g~date_collection, data=dat.leaf, mean)
+
+rows=1
+for(i in rows:nrow(dat.leafdate)){
+  date_check = dat.leafdate[i, "date_collection"]
+  date_lead = dat.leafdate[i+1, "date_collection"]
+  rows=rows+1
+  if (date_check != tail(dat.leafdate$date_collection, n=1)){
+    if (date_check != date_lead){
+    dat.leafdate <- dat.leafdate %>% mutate(date_diff = (date_check - date_lead))
+    }
+  } else {break}
+}
+
+rows=1
+for(i in rows:nrow(dat.leafdate)){
+      dat.leafdate <- dat.leafdate %>% mutate(date_diff = (dat.leafdate[i+1,1]-dat.leafdate[i,1]))
+      rows=rows+1
+}
+dat.leafdate$date_comp = transform(dat.leafdate, date_collection=c(NA, date_collection[-nrow(dat.leafdate)]))
+
+View(dat.leafdate)
+
+#Tile Plot tissue by species over time for prevalence
+ggplot(dat.lit, aes(x=month, y=taxon, alpha=mass_g))+
+  geom_tile(aes(color=taxon))+
+  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
+  ggtitle("mass_g of tissue by species over time")
 
