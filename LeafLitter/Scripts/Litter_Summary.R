@@ -400,6 +400,9 @@ View(dat.leafdate)
 str(dat.leafdate)
 
 
+dat.leafdate <- select(filter(dat.leafdate, taxon!= "unknown"),c(date_collection, taxon, mass_g, date_comp, mass_per_day, mid_date))
+dat.leafdate <- select(filter(dat.leafdate, taxon!= "Quercus"),c(date_collection, taxon, mass_g, date_comp, mass_per_day, mid_date))
+
 ggplot(dat.leafdate, aes(x=mid_date, y=taxon, fill=mass_per_day, width=date_comp))+
   geom_tile(color='white', aes(color=mid_date))+
   theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
