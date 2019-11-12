@@ -368,32 +368,42 @@ ggplot(dat.datemass, aes(x=month, y=mass_z, label=mass_z))+
 #--------------------------------------------------#
 #orders by date collection
 dat.leaf <- dat.leaf[order(dat.leaf$date_collection),]
-dat.leafdate <- aggregate(mass_g~date_collection, data=dat.leaf, mean)
+dat.leafdate <- aggregate(mass_g~date_collection+taxon, data=dat.leaf, mean)
 
-rows=1
-for(i in rows:nrow(dat.leafdate)){
-  date_check = dat.leafdate[i, "date_collection"]
-  date_lead = dat.leafdate[i+1, "date_collection"]
-  rows=rows+1
-  if (date_check != tail(dat.leafdate$date_collection, n=1)){
-    if (date_check != date_lead){
-    dat.leafdate <- dat.leafdate %>% mutate(date_diff = (date_check - date_lead))
-    }
+dat.leafdate$date_comp <- 0
+#loop to create value of the differences between dates
+for(i in 1:nrow(dat.leafdate)){
+  if(dat.leafdate[i, "taxon"]!= "unknown"){
+    if(dat.leafdate[i,"taxon"] == dat.leafdate[i+1, "taxon"]){
+      n <- (dat.leafdate[i+1,"date_collection"]-dat.leafdate[i,"date_collection"])
+    } else{n=0}
+    dat.leafdate$date_comp[i+1] <- n
   } else {break}
 }
 
-rows=1
-for(i in rows:nrow(dat.leafdate)){
-      dat.leafdate <- dat.leafdate %>% mutate(date_diff = (dat.leafdate[i+1,1]-dat.leafdate[i,1]))
-      rows=rows+1
+#removing values casued by first measurement
+dat.leafdate <- dat.leafdate %>% transform(date_comp = ifelse(date_comp==0, NA, date_comp))
+dat.leafdate$mass_per_day <- 0
+
+for(i in 1:nrow(dat.leafdate)){
+  if(!is.na(dat.leafdate[i, "date_comp"])){
+  n <- (dat.leafdate[i,"mass_g"]/dat.leafdate[i,"date_comp"])
+  }else{n=NA}
+  dat.leafdate$mass_per_day[i] <- n
 }
-dat.leafdate$date_comp = transform(dat.leafdate, date_collection=c(NA, date_collection[-nrow(dat.leafdate)]))
+
+#determining the midpoint between measured dates so that the width can be centered here
+dat.leafdate$mid_date <- (dat.leafdate$date_collection - (dat.leafdate$date_comp/2))
+
 
 View(dat.leafdate)
+str(dat.leafdate)
 
-#Tile Plot tissue by species over time for prevalence
-ggplot(dat.lit, aes(x=month, y=taxon, alpha=mass_g))+
-  geom_tile(aes(color=taxon))+
+
+ggplot(dat.leafdate, aes(x=mid_date, y=taxon, fill=mass_per_day, width=date_comp))+
+  geom_tile(color='white', aes(color=mid_date))+
   theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
-  ggtitle("mass_g of tissue by species over time")
+  ggtitle("mass/day over time periods by species")+
+  scale_x_date(date_breaks="1 month", date_labels = "%b-%y")
+  
 
