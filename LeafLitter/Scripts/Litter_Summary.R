@@ -20,22 +20,50 @@ dat.lit <- dat.lit %>% mutate(mass.sqrt = sqrt(mass_g),
 #removing NA values created by fact that volunteers record plot and date in advance of acquiring data
 dat.lit <- dat.lit[!is.na(dat.lit$trap_ID),]
 
-#Getting rid of huge outlier of heavy chunk of ash bark
-#library(data.table)
-#outlierReplace = function(dat.lit, cols, rows, newValue = NA) {
-#  if (any(rows)) {
-#    set(dat.lit, rows, cols, newValue)
-#  }
-#}
-#outlierReplace(dat.lit, "mass_g", which(dat.lit$mass_g > 50), NA)
+#--------------------------------------------------#
+#orders by date collection
+#working with just leaf tissue
+dat.leaf <- dat.lit[dat.lit$tissue=="leaf",]
+dat.leaf <- dat.leaf[!is.na(dat.leaf$trap_ID),]
+dat.leaf <- dat.leaf[order(dat.leaf$date_collection),]
+dat.leafdate <- aggregate(mass_g~date_collection+taxon, data=dat.leaf, mean)
 
-#Mean, SD, and ANOVA (will need to change ANOVA) for mass across plots
-tapply(dat.lit$mass_g, dat.lit$plot, mean)
-tapply(dat.lit$mass_g, dat.lit$plot, sd)
-res.aov <- aov(mass_g ~ plot, data = dat.lit)
-summary(res.aov)
+dat.leafdate$date_comp <- 0
+#loop to create value of the differences between dates
+for(i in 1:nrow(dat.leafdate)){
+  if(dat.leafdate[i, "taxon"]!= "unknown"){
+    if(dat.leafdate[i,"taxon"] == dat.leafdate[i+1, "taxon"]){
+      n <- (dat.leafdate[i+1,"date_collection"]-dat.leafdate[i,"date_collection"])
+    } else{n=0}
+    dat.leafdate$date_comp[i+1] <- n
+  } else {break}
+}
 
-#--------------------------#
+#removing values casued by first measurement
+dat.leafdate <- dat.leafdate %>% transform(date_comp = ifelse(date_comp==0, NA, date_comp))
+dat.leafdate$mass_per_day <- 0
+
+for(i in 1:nrow(dat.leafdate)){
+  if(!is.na(dat.leafdate[i, "date_comp"])){
+    n <- (dat.leafdate[i,"mass_g"]/dat.leafdate[i,"date_comp"])
+  }else{n=NA}
+  dat.leafdate$mass_per_day[i] <- n
+}
+
+#determining the midpoint between measured dates so that the width can be centered here
+dat.leafdate$mid_date <- (as.Date(dat.leafdate$date_collection) - (dat.leafdate$date_comp/2))
+
+#removes unknown leaf litter and general "Quercus" id's. Optional part to be run
+dat.leafdate <- select(filter(dat.leafdate, taxon!= "unknown"),c(date_collection, taxon, mass_g, date_comp, mass_per_day, mid_date))
+dat.leafdate <- select(filter(dat.leafdate, taxon!= "Quercus"),c(date_collection, taxon, mass_g, date_comp, mass_per_day, mid_date))
+
+ggplot(dat.leafdateq, aes(x=mid_date, y=taxon, fill=mass_per_day, width=date_comp))+
+  geom_tile(color='white', aes(color=mid_date))+
+  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
+  ggtitle("mass/day over time periods by species")+
+  scale_x_date(date_breaks="1 month", date_labels = "%b-%y")
+
+
 #pie table to visualize composition. Probabaly to be removed as it isnt useful
 pie <- ggplot(dat.lit, aes(x="", fill = factor(taxon)))+
   geom_bar(width = 1)+
@@ -87,21 +115,6 @@ dat.mean <- dat.mean %>% mutate(mass_mean.sqrt = sqrt(mass_g),
                                 month = format(date_collection, format="%m/%d"))
 colnames(dat.mean)[colnames(dat.mean)=='mass_g'] <- 'mass_mean'
 
-#Tile Plot for the mean of taxons by tissue and plot
-ggplot(dat.mean, aes(x=taxon, y=tissue, alpha=mass_mean))+
-  facet_wrap(~plot, scales = "fixed")+
-  geom_tile(aes(color=taxon))+
-  theme(axis.text.x = element_text(size=8, angle=75, vjust=0.6))+
-  ggtitle("Mean taxon tissue type by plot")
-
-
-#Mean tile plots tissue by species over time for prevalence
-ggplot(dat.mean, aes(x=month, y=tissue, alpha=mass_mean))+
-  facet_wrap(~taxon, scales = "fixed")+
-  geom_tile()+
-  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
-  ggtitle("mean tissue by species over time")
-
 #------------------------------#
 #data frame where trap_id is excluded and mass is summed by date, taxon, plot, and tissue
 dat.sum <- aggregate(mass_g~date_collection+genus+species+taxon+plot+tissue, data=dat.lit, sum)
@@ -109,65 +122,7 @@ dat.sum <- dat.sum %>% mutate(mass_sum.sqrt = sqrt(mass_g),
                               month = format(date_collection, format="%m/%d"))
 colnames(dat.sum)[colnames(dat.sum)=='mass_g'] <- 'mass_sum'
 
-#Plot for seeing change in mass totals over time
-ggplot(dat.sum, aes(x=month, y=mass_sum.sqrt))+
-  facet_wrap(~tissue)+
-  geom_point(aes(color=taxon))+
-  ggtitle("Squared mass of tissue over time")+
-  xlab("date collected")+
-  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))
-
-#Plot for seeing changes in mass totals per species over time
-ggplot(dat.sum, aes(x=month, y=mass_sum.sqrt))+
-  facet_wrap(~taxon)+
-  geom_point(aes(color=tissue))+
-  ggtitle("Sqaured mass of taxa over time")+
-  xlab("date collected")+
-  theme(axis.text.x = element_text(size=8, angle=70, vjust=0.6))
-
 #----------------------------#
-#working with fruits
-dat.fruit <- dat.lit[!is.na(dat.lit$num_fruit),]
-
-#Converting instances of characters into an NA
-dat.fruit[,9][dat.fruit[, 9] =="multiple"] <- NA
-
-dat.fruit <- dat.fruit %>% transform(num_fruit = as.numeric(dat.fruit$num_fruit),
-                                     num_mature_fruit = as.numeric(dat.fruit$num_mature_fruit))
-
-#rows=1
-#for(i in rows:nrow(dat.fruit)){
-#  if(!is.na(dat.fruit[rows, 'num_fruit'])){
-#    dat.fruit[rows, 'num_immature_fruit'] = ifelse(is.na(dat.fruit[rows, 'num_immature_fruit']),0,dat.fruit[rows, 'num_immature_fruit'])
-#    dat.fruit[rows, 'num_mature_fruit'] = ifelse(is.na(dat.fruit[rows, 'num_mature_fruit']),0,dat.fruit[rows, 'num_mature_fruit'])
-#  }
-#  rows=rows+1
-#}
-
-#Plot of fruitmass of taxa by plot
-ggplot(dat.fruit, aes(x=taxon, y=mass_g))+
-  facet_wrap(~plot, scales = "fixed")+
-  geom_bar(stat="identity")+
-  theme(axis.text.x= element_text(angle=75, vjust=0.6))
-
-ggplot(dat.fruit, aes(mass.sqrt))+
-  geom_density(aes(fill=factor(genus)), alpha=0.8)
-
-#Graphs 
-ggplot(dat.fruit, aes(x=taxon, y=num_fruit))+
-  facet_wrap(~plot)+
-  geom_count(aes(color=taxon))+
-  theme(axis.text.x= element_text(angle=75, vjust=0.6))
-
-ggplot(dat.fruit, aes(taxon, mass.sqrt))+
-  geom_violin()+
-  theme(axis.text.x = element_blank(), plot.title = element_text(hjust=0.5))+
-  facet_wrap(~plot, scales = "free_y")
-
-#----------------------------#
-#working with just leaf tissue
-dat.leaf <- dat.lit[dat.lit$tissue=="leaf",]
-dat.leaf <- dat.leaf[!is.na(dat.leaf$trap_ID),]
 
 dat.leafmean <- aggregate(mass_g~date_collection+taxon+plot, data=dat.leaf, mean)
 dat.leafmean <- dat.leafmean %>% mutate(mass_mean.sqrt = sqrt(mass_g),
@@ -181,13 +136,6 @@ ggplot(dat.leaf, aes(x=taxon, y=mass_g))+
   facet_wrap(~plot, scales = "fixed")+
   geom_bar(stat="identity", aes(color=taxon))+
   theme(axis.text.x= element_text(angle=75, vjust=0.6))
-
-ggplot(dat.leaf, aes(x=month, y=mass_g))+
-  facet_wrap(~plot, scales = "fixed")+
-  geom_bar(stat="identity", aes(color=taxon))+
-  xlab("date collected")+
-  ggtitle("leaf mass of date collected by plot")+
-  theme(axis.text.x= element_text(angle=60, vjust=0.6))
 
 ggboxplot(dat.leaf, x = "taxon", y = "mass.sqrt", 
           color = "taxon",
@@ -254,27 +202,6 @@ ggplot(dat.oaks, aes(x=month, y=tissue))+
   ggtitle("Oak tissue by species over time")+
   xlab("date collected")
 
-#-----------------------------------#
-#working with Trap_id for the plots
-dat.trapmean <- aggregate(mass_g~trap_ID+plot, data=dat.lit, mean)
-dat.trapmean <- dat.trapmean %>% mutate(mass_mean.sqrt = sqrt(mass_g))
-dat.trapmean$mass_z <- round((dat.trapmean$mass_g-mean(dat.trapmean$mass_g))/sd(dat.trapmean$mass_g),3)
-
-ggplot(dat.trapmean, aes(x=trap_ID, y=mass_z, label=mass_z))+
-  facet_wrap(~plot, scales = "free_x")+
-  geom_point(stat='identity', fill="black", size=8)+
-  geom_segment(aes(y=0, x = trap_ID, yend=mass_z, xend=trap_ID))+
-  geom_text(color="white", size=2)+
-  ggtitle("Divergence of mean mass per trap per plot")
-
-dat.traptax <- aggregate(mass_g~trap_ID+plot+taxon, data=dat.lit, mean)
-
-ggplot(dat.traptax, aes(x=trap_ID))+
-  facet_wrap(~plot, scales="free_x")+
-  geom_bar(aes(fill=taxon))
-
-
-
 #-------------#
 #mass is summed by taxon exclusively for divergence calculation
 dat.taxmass <- aggregate(mass_g~taxon, data=dat.lit, mean)
@@ -319,48 +246,18 @@ ggplot(dat.datemass, aes(x=month, y=mass_z, label=mass_z))+
   geom_segment(aes(y=0, x = month, yend=mass_z, xend=month))+
   geom_text(color="white", size=2)
 
-#--------------------------------------------------#
-#orders by date collection
-dat.leaf <- dat.leaf[order(dat.leaf$date_collection),]
-dat.leafdate <- aggregate(mass_g~date_collection+taxon, data=dat.leaf, mean)
 
-dat.leafdate$date_comp <- 0
-#loop to create value of the differences between dates
-for(i in 1:nrow(dat.leafdate)){
-  if(dat.leafdate[i, "taxon"]!= "unknown"){
-    if(dat.leafdate[i,"taxon"] == dat.leafdate[i+1, "taxon"]){
-      n <- (dat.leafdate[i+1,"date_collection"]-dat.leafdate[i,"date_collection"])
-    } else{n=0}
-    dat.leafdate$date_comp[i+1] <- n
-  } else {break}
-}
+#Getting rid of huge outlier of heavy chunk of ash bark
+#library(data.table)
+#outlierReplace = function(dat.lit, cols, rows, newValue = NA) {
+#  if (any(rows)) {
+#    set(dat.lit, rows, cols, newValue)
+#  }
+#}
+#outlierReplace(dat.lit, "mass_g", which(dat.lit$mass_g > 50), NA)
 
-#removing values casued by first measurement
-dat.leafdate <- dat.leafdate %>% transform(date_comp = ifelse(date_comp==0, NA, date_comp))
-dat.leafdate$mass_per_day <- 0
-
-for(i in 1:nrow(dat.leafdate)){
-  if(!is.na(dat.leafdate[i, "date_comp"])){
-  n <- (dat.leafdate[i,"mass_g"]/dat.leafdate[i,"date_comp"])
-  }else{n=NA}
-  dat.leafdate$mass_per_day[i] <- n
-}
-
-#determining the midpoint between measured dates so that the width can be centered here
-dat.leafdate$mid_date <- (dat.leafdate$date_collection - (dat.leafdate$date_comp/2))
-
-
-View(dat.leafdate)
-str(dat.leafdate)
-
-
-dat.leafdate <- select(filter(dat.leafdate, taxon!= "unknown"),c(date_collection, taxon, mass_g, date_comp, mass_per_day, mid_date))
-dat.leafdate <- select(filter(dat.leafdate, taxon!= "Quercus"),c(date_collection, taxon, mass_g, date_comp, mass_per_day, mid_date))
-
-ggplot(dat.leafdate, aes(x=mid_date, y=taxon, fill=mass_per_day, width=date_comp))+
-  geom_tile(color='white', aes(color=mid_date))+
-  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
-  ggtitle("mass/day over time periods by species")+
-  scale_x_date(date_breaks="1 month", date_labels = "%b-%y")
-  
-
+#Mean, SD, and ANOVA (will need to change ANOVA) for mass across plots
+tapply(dat.lit$mass_g, dat.lit$plot, mean)
+tapply(dat.lit$mass_g, dat.lit$plot, sd)
+res.aov <- aov(mass_g ~ plot, data = dat.lit)
+summary(res.aov)
