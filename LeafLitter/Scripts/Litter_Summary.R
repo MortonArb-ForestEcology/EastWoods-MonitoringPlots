@@ -1,13 +1,17 @@
 #Script for summarizing leaf litter data. Largely cannibalized from Bethany
-library(googlesheets)
+library(googlesheets4)
 library(ggplot2)
 library(dplyr)
 library(ggpubr)
 library(lubridate)
 
+path.l <- "G:/My Drive/East Woods/Rollinson_Monitoring/Data/Leaf_litter_data/"
+
+setwd(path.l)
+
 #grabbing the file from google drive and making it a workable data frame
-litter.df <- gs_title("Leaf_Litter_Data")
-dat.lit <- data.frame(gs_read(litter.df, ws="raw_data"))
+litter.df <- sheets_find("Leaf_Litter_Data")
+dat.lit <- data.frame(sheets_read(litter.df, range='raw_data'))
 
 #adding a sqaured mass column and month column for different explorations
 dat.lit <- dat.lit %>% mutate(mass.sqrt = sqrt(mass_g),
