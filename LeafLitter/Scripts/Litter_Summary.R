@@ -21,13 +21,13 @@ dat.lit <- dat.lit %>% mutate(mass.sqrt = sqrt(mass_g),
 dat.lit <- dat.lit[!is.na(dat.lit$trap_ID),]
 
 #Getting rid of huge outlier of heavy chunk of ash bark
-library(data.table)
-outlierReplace = function(dat.lit, cols, rows, newValue = NA) {
-  if (any(rows)) {
-    set(dat.lit, rows, cols, newValue)
-  }
-}
-outlierReplace(dat.lit, "mass_g", which(dat.lit$mass_g > 50), NA)
+#library(data.table)
+#outlierReplace = function(dat.lit, cols, rows, newValue = NA) {
+#  if (any(rows)) {
+#    set(dat.lit, rows, cols, newValue)
+#  }
+#}
+#outlierReplace(dat.lit, "mass_g", which(dat.lit$mass_g > 50), NA)
 
 #Mean, SD, and ANOVA (will need to change ANOVA) for mass across plots
 tapply(dat.lit$mass_g, dat.lit$plot, mean)
@@ -57,12 +57,6 @@ ggplot(dat.freq, aes(Var1, Freq))+
   theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
   ggtitle("Frequency of taxa across plots")
 
-#bar chart of frequency of tissue type by taxa
-ggplot(dat.lit, aes(taxon))+
-  geom_bar(aes(fill=tissue), width=0.5)+
-  theme(axis.text.x = element_text(size=8, angle=75, vjust=0.6))+
-  ggtitle("Freqeuncy of taxa filled by tissue type")
-
 #bar chart of frequency of taxa at plot
 ggplot(dat.lit, aes(plot))+
   geom_bar(aes(fill=taxon), width=0.5)
@@ -78,56 +72,12 @@ ggboxplot(dat.lit, x = "taxon", y = "mass_g",
   theme(axis.text.x = element_blank(), plot.title = element_text(hjust=0.5))+
   facet_wrap(~plot, scales = "fixed")
 
-#box plot with mass squared to look at outliers
-ggboxplot(dat.lit, x = "taxon", y = "mass.sqrt", 
-          color = "taxon",
-          facet.by = "plot",
-          ylab = "Sqaure root of Mass (g)", xlab = "Plot", 
-          title = "(Raw) Sqaure root of Mass of All Tissue Sep2018-Sep2019",
-          legend = "right") +
-  theme(axis.text.x = element_blank(), plot.title = element_text(hjust=0.5))+
-  facet_wrap(~plot, scales = "fixed")
-
 #Plot for seeing mass by genus per plot
 ggplot(dat.lit, aes(x=taxon, y=mass.sqrt))+
   facet_wrap(~plot)+
   geom_jitter(aes(color=taxon))+
   ggtitle("Squared mass of taxa per plot")+
   theme(axis.text.x = element_text(size=8, angle=70, vjust=0.6))
-
-#Plot for mass of tissue type in each plot by taxon
-ggplot(dat.lit, aes(x=plot, y=tissue, alpha=mass_g))+
-  facet_wrap(~taxon, scales = "fixed")+
-  geom_tile(aes(color=tissue))+
-  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
-  ggtitle("mass_g of species by plot and tissue type")
-
-#Plot for tissue presence of each taxon by plot
-ggplot(dat.lit, aes(x=plot, y=tissue))+
-  facet_wrap(~taxon, scales = "fixed")+
-  geom_count(aes(color=tissue))+
-  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
-  ggtitle("Tissue type for taxon by plot")
-
-#Count Plot for the taxons tissue type by plot
-ggplot(dat.lit, aes(x=taxon, y=tissue))+
-  facet_wrap(~plot, scales = "fixed")+
-  geom_count(aes(color=taxon))+
-  theme(axis.text.x = element_text(size=8, angle=75, vjust=0.6))+
-  ggtitle("Taxon tissue type by plot")
-
-#Tile Plot for the taxons tissue type by plot
-ggplot(dat.lit, aes(x=taxon, y=tissue, alpha=mass_g))+
-  facet_wrap(~plot, scales = "fixed")+
-  geom_tile(aes(color=taxon))+
-  theme(axis.text.x = element_text(size=8, angle=75, vjust=0.6))+
-  ggtitle("mass_g of Taxa by tissue type and plot")
-
-#Tile Plot tissue by species over time for prevalence
-ggplot(dat.lit, aes(x=month, y=taxon, alpha=mass_g))+
-  geom_tile(aes(color=taxon))+
-  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
-  ggtitle("mass_g of tissue by species over time")
 
 #-------------------------------#
 #Graphs that use a mean value
