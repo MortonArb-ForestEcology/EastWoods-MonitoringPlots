@@ -31,6 +31,7 @@ ggplot(ll.dat, aes(x=Date, y=C.N))+
 ggplot(ll.dat, aes(x=Date, y=C.N))+
   facet_wrap(~PlotID)+
   geom_line(aes(color=Species))+
+  geom_point(aes(color=Species))+
   ggtitle("CN analysis")
 
 ggplot(ll.dat, aes(x=Date, y=C.N))+
