@@ -14,9 +14,11 @@ litter.df <- sheets_find("Leaf_Litter_Data")
 dat.lit <- data.frame(sheets_read(litter.df, range='raw_data'))
 
 #removing NA values created by fact that volunteers record plot and date in advance of acquiring data
-dat.lit <- dat.lit[!is.na(dat.lit$trap_ID),]
 dat.leaf <- dat.lit[dat.lit$tissue=="leaf",]
 dat.leaf <- dat.leaf[!is.na(dat.leaf$trap_ID),]
+dat.leaf <- subset(dat.leaf, select=-c(1,7,9:13,15:16,18))
+
+dat.agg <- aggregate(mass_g~date_collection+taxon+plot+tissue+genus+species, data=dat.leaf, mean)
 
 #reading CN output file
 CN.dat <-readbulk::read_bulk(directory = "CN_Runs", extension = ".csv", header = FALSE, skip=1,)
@@ -48,12 +50,12 @@ CN.dat$Taxon <- gsub("QA", "Que. alba", CN.dat$Taxon)
 CN.dat$Taxon <- gsub("TA", "Til. americana", CN.dat$Taxon)
 CN.dat$Taxon <- gsub("AS", "Ace. saccharum", CN.dat$Taxon)
 
+
 #Creating a column with the difference between dates to create a rate of mass column
 #This is stolen from the leaf litter code could have a direct work flow but the other script needs plot aggregated. Might fix later
 
 #Combining our CN frame with our leaf litter datatframe
-leaf.comb <- merge(dat.leaf, CN.dat, by.x=c("date_collection", "plot", "taxon"), by.y=c("Date", "PlotID", "Taxon"))
-leaf.comb <- subset(leaf.comb, select=-c(4,5,8:14,16,17,19))
+leaf.comb <- merge(dat.agg, CN.dat, by.x=c("date_collection", "plot", "taxon"), by.y=c("Date", "PlotID", "Taxon"))
 
 #Creating a new data frame to add in the amount of days in between measurements
 date.df <- data.frame(unique(leaf.comb$date_collection))
@@ -67,8 +69,8 @@ for(i in 1:nrow(date.df)){
 
 leaf.final <- merge(leaf.comb, date.df ,by.x=c("date_collection"), by.y = c("Date"))
 
-#removing values casued by first measurement
-dat.leaf <- dat.leaf %>% transform(date_comp = ifelse(date_comp==0, NA, date_comp))
+#addes value for first column based on knowledge of last date. Could maybe automate later but unsure if thats really more efficient
+leaf.final <- leaf.final %>% transform(date_comp = ifelse(date_comp==0, 21, date_comp))
 
 #Using the date difference to calculate mass per day
 leaf.final$mass_per_day <- 0
@@ -78,10 +80,16 @@ for(i in 1:nrow(leaf.final)){
   leaf.final$mass_per_day[i] <- n
 }
 
-ggplot(leaf.comb, aes(x=date_collection, y=C.N))+
+
+#Visualizations
+ggplot(leaf.final, aes(x=date_collection, y=C.N))+
   facet_wrap(~plot)+
-  geom_line(aes(color=taxon))+
+  geom_smooth(aes(color=taxon))+
   ggtitle("CN analysis")
+
+ggplot(leaf.final, aes(x=date_collection, y=mass_per_day))+
+  facet_wrap(~plot)+
+  geom_smooth(aes(color = taxon))
 
 ggplot(leaf.comb, aes(x=date_collection, y=mass_g))+
   facet_wrap(~plot)+
