@@ -80,40 +80,53 @@ for(i in 1:nrow(leaf.final)){
   leaf.final$mass_per_day[i] <- n
 }
 
+#Adding middate value for grpahical representation
+leaf.final$mid_date <- (as.Date(leaf.final$date_collection) - (leaf.final$date_comp/2))
+
+ggplot(leaf.final, aes(x=mid_date, y=taxon, fill=C.N, width=date_comp))+
+  geom_tile()+
+  scale_x_date(labels = leaf.final$date_collection, 
+               breaks = leaf.final$date_collection) +
+  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
+  ggtitle("C.N over time periods by species")
+
 
 #Visualizations
 ggplot(leaf.final, aes(x=date_collection, y=C.N))+
-  facet_wrap(~plot)+
-  geom_smooth(aes(color=taxon))+
+  facet_wrap(~plot,  scales = 'free_y')+
+  geom_line(aes(color=taxon))+
+  geom_point(aes(color = taxon))+
+  scale_x_date(labels = leaf.final$date_collection, 
+               breaks = leaf.final$date_collection) +
+  theme(axis.text.x = element_text(angle = 60, vjust=0.5))+
   ggtitle("CN analysis")
 
 ggplot(leaf.final, aes(x=date_collection, y=mass_per_day))+
-  facet_wrap(~plot)+
-  geom_smooth(aes(color = taxon))
+  facet_wrap(~plot, scales = 'free_y')+
+  geom_point(aes(color = taxon))+
+  geom_line(aes(color = taxon))+
+  scale_x_date(labels = leaf.final$date_collection, 
+               breaks = leaf.final$date_collection) +
+  theme(axis.text.x = element_text(angle = 60, vjust=0.5))+
+  ggtitle("mass_per_day")
 
-ggplot(leaf.comb, aes(x=date_collection, y=mass_g))+
-  facet_wrap(~plot)+
-  geom_line(aes(color=taxon))+
+
+ggplot(leaf.final, aes(x=date_collection, y=C.N))+
+  facet_wrap(~taxon)+
+  geom_line(aes(color=plot))+
+  geom_point(aes(color=plot))+
+  scale_x_date(labels = leaf.final$date_collection, 
+               breaks = leaf.final$date_collection) +
+  theme(axis.text.x = element_text(angle = 60, vjust=0.5))+
   ggtitle("CN analysis")
 
-
-#Visualizing
-ggplot(CN.dat, aes(x=Date, y=C.N))+
-  geom_smooth(aes(color=Species))+
-  ggtitle("CN analysis")
-
-ggplot(CN.dat, aes(x=Date, y=C.N))+
-  facet_wrap(~PlotID)+
-  geom_line(aes(color=Species))+
-  geom_point(aes(color=Species))+
-  ggtitle("CN analysis")
-
-ggplot(CN.dat, aes(x=Date, y=C.N))+
-  geom_point(aes(color=Species))+
-  ggtitle("CN analysis")
-
-ggplot(CN.dat, aes(x=Date, y=C.N))+
-  geom_smooth(aes(color=PlotID))+
+ggplot(leaf.final, aes(x=date_collection, y=mass_per_day))+
+  facet_wrap(~taxon)+
+  geom_line(aes(color=plot))+
+  geom_point(aes(color=plot))+
+  scale_x_date(labels = leaf.final$date_collection, 
+               breaks = leaf.final$date_collection) +
+  theme(axis.text.x = element_text(angle = 60, vjust=0.5))+
   ggtitle("CN analysis")
 
 
