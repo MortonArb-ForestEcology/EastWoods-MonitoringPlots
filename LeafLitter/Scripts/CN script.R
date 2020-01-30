@@ -51,36 +51,31 @@ CN.dat$Taxon <- gsub("AS", "Ace. saccharum", CN.dat$Taxon)
 #Creating a column with the difference between dates to create a rate of mass column
 #This is stolen from the leaf litter code could have a direct work flow but the other script needs plot aggregated. Might fix later
 
-
-#pull out discrete dates, order them, do the difference, then add them to the matchign columns, then do mass/day
-
-
-
 #Combining our CN frame with our leaf litter datatframe
 leaf.comb <- merge(dat.leaf, CN.dat, by.x=c("date_collection", "plot", "taxon"), by.y=c("Date", "PlotID", "Taxon"))
 leaf.comb <- subset(leaf.comb, select=-c(4,5,8:14,16,17,19))
 
+#Creating a new data frame to add in the amount of days in between measurements
 date.df <- data.frame(unique(leaf.comb$date_collection))
 colnames(date.df) <- c("Date")
 date.df$date_comp <- 0
 
-rows <- 1
-for(i in rows:nrow(date.df$Date)){
-      n <- (date.df[i+1,]-date.df[i,])
-      date.df$date_comp[i+1] <- n
+for(i in 1:nrow(date.df)){
+  n <- (date.df[i+1,1] - date.df[i,1])
+  date.df$date_comp[i+1] <- n
 }
 
-str(leaf.comb)
+leaf.final <- merge(leaf.comb, date.df ,by.x=c("date_collection"), by.y = c("Date"))
 
 #removing values casued by first measurement
 dat.leaf <- dat.leaf %>% transform(date_comp = ifelse(date_comp==0, NA, date_comp))
-dat.leaf$mass_per_day <- 0
 
-for(i in 1:nrow(dat.leaf)){
-  if(!is.na(dat.leaf[i, "date_comp"])){
-    n <- (dat.leaf[i,"mass_g"]/dat.leaf[i,"date_comp"])
-  }else{n=NA}
-  dat.leaf$mass_per_day[i] <- n
+#Using the date difference to calculate mass per day
+leaf.final$mass_per_day <- 0
+
+for(i in 1:nrow(leaf.final)){
+    n <- (leaf.final[i,"mass_g"]/leaf.final[i,"date_comp"])
+  leaf.final$mass_per_day[i] <- n
 }
 
 ggplot(leaf.comb, aes(x=date_collection, y=C.N))+
