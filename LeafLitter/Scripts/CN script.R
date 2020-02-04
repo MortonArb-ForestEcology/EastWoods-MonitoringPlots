@@ -1,5 +1,4 @@
 #Script for visualizing leaf litter data
-library(googlesheets4)
 library(ggplot2)
 library(tidyr)
 library(ggpubr)
@@ -10,8 +9,8 @@ path.l <- "G:/My Drive/East Woods/Rollinson_Monitoring/Data/Leaf_litter_data/"
 setwd(path.l)
 
 #grabbing the file from google drive and making it a workable data frame
-litter.df <- sheets_find("Leaf_Litter_Data")
-dat.lit <- data.frame(sheets_read(litter.df, range='raw_data'))
+litter.df <- googlesheets4::sheets_find("Leaf_Litter_Data")
+dat.lit <- data.frame(googlesheets4::sheets_read(litter.df, range='raw_data'))
 
 #removing NA values created by fact that volunteers record plot and date in advance of acquiring data
 dat.leaf <- dat.lit[dat.lit$tissue=="leaf",]
@@ -81,25 +80,80 @@ for(i in 1:nrow(leaf.final)){
 }
 
 #Adding middate value for grpahical representation
-leaf.final$mid_date <- (as.Date(leaf.final$date_collection) - (leaf.final$date_comp/2))
+leaf.final$date_collection <- as.Date(leaf.final$date_collection)
+leaf.final$mid_date <- as.Date((leaf.final$date_collection) - (leaf.final$date_comp/2))
 
-ggplot(leaf.final, aes(x=mid_date, y=taxon, fill=C.N, width=date_comp))+
-  geom_tile()+
+#Creating proportions. This is real messy but it works
+leaf.prop <- leaf.final %>%
+              group_by(plot, date_collection) %>%
+              mutate(plot_mean = mean(C.N))
+
+
+leaf.prop <- leaf.prop %>%
+              group_by(plot, date_collection) %>%
+              mutate(sd = sd(C.N))
+
+leaf.prop <- leaf.prop %>%
+              group_by(plot, date_collection) %>%
+              mutate(taxon_count = length(unique(taxon)))
+
+leaf.prop <- leaf.prop %>% mutate(taxon_prop = C.N / taxon_count)
+
+
+
+ggplot(leaf.final, aes(x=mid_date, y=taxon, fill=mass_per_day, width=date_comp))+
+  facet_wrap(~plot)+
+  geom_tile(color='white', aes(color=mid_date))+
   scale_x_date(labels = leaf.final$date_collection, 
                breaks = leaf.final$date_collection) +
   theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
-  ggtitle("C.N over time periods by species")
+  ggtitle("mass_per_day over time periods by species")
 
 
 #Visualizations
 ggplot(leaf.final, aes(x=date_collection, y=C.N))+
-  facet_wrap(~plot,  scales = 'free_y')+
+  facet_wrap(~plot)+
   geom_line(aes(color=taxon))+
   geom_point(aes(color = taxon))+
   scale_x_date(labels = leaf.final$date_collection, 
                breaks = leaf.final$date_collection) +
   theme(axis.text.x = element_text(angle = 60, vjust=0.5))+
-  ggtitle("CN analysis")
+  ggtitle("C:N ratio over time")
+
+
+ggplot(leaf.final, aes(x=mass_per_day, y = C.N))+
+  geom_jitter()+
+  ggtitle("Mass_per_day vs. C:N")
+
+
+ggplot(leaf.final, aes(x=date_collection, y =C.N))+
+  facet_wrap(~plot)+
+  ylim(-10,80)+
+  geom_point(aes(color = taxon))+
+  geom_smooth(aes(color = taxon))+
+  scale_x_date(labels = leaf.final$date_collection, 
+               breaks = leaf.final$date_collection) +
+  theme(axis.text.x = element_text(angle = 60, vjust=0.5))+
+  ggtitle("General trend of C:N ratio over time by plot")
+
+ggplot(leaf.final, aes(x=taxon))+
+  geom_bar(aes(fill=plot))+
+  ggtitle("taoxn per day")
+  
+ggplot(leaf.final, aes(x=plot, y=C.N))+
+  facet_wrap(~date_collection)+
+  geom_bar(aes(fill=taxon), stat = "identity")+
+  ggtitle("C.N ratio of each species in a plot")
+
+ggplot(leaf.prop, aes(x=date_collection, y=taxon_prop))+
+  facet_wrap(~plot)+
+  geom_line(aes(color=taxon))+
+  scale_x_date(labels = leaf.final$date_collection, 
+               breaks = leaf.final$date_collection) +
+  theme(axis.text.x = element_text(angle = 60, vjust=0.5))+
+  ggtitle("C.N ratio of each species in a plot")
+  
+
 
 ggplot(leaf.final, aes(x=date_collection, y=mass_per_day))+
   facet_wrap(~plot, scales = 'free_y')+
