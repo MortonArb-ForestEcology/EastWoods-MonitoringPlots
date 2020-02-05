@@ -56,50 +56,69 @@ CN.dat$Taxon <- gsub("AS", "Ace. saccharum", CN.dat$Taxon)
 #Combining our CN frame with our leaf litter datatframe
 leaf.comb <- merge(dat.agg, CN.dat, by.x=c("date_collection", "plot", "taxon"), by.y=c("Date", "PlotID", "Taxon"))
 
+#THIS SECTION COMMENTED OUT. This is because this will set a static difference between measured dates
+#regardless of if a species was at a plot during that measuremnt. Could be useful later.
 #Creating a new data frame to add in the amount of days in between measurements
-date.df <- data.frame(unique(leaf.comb$date_collection))
-colnames(date.df) <- c("Date")
-date.df$date_comp <- 0
+#date.df <- data.frame(unique(leaf.comb$date_collection))
+#colnames(date.df) <- c("Date")
+#date.df$date_comp <- 0
 
-for(i in 1:nrow(date.df)){
-  n <- (date.df[i+1,1] - date.df[i,1])
-  date.df$date_comp[i+1] <- n
-}
+#for(i in 1:nrow(date.df)){
+#  n <- (date.df[i+1,1] - date.df[i,1])
+#  date.df$date_comp[i+1] <- n
+#}
 
-leaf.final <- merge(leaf.comb, date.df ,by.x=c("date_collection"), by.y = c("Date"))
+#leaf.final <- merge(leaf.comb, date.df ,by.x=c("date_collection"), by.y = c("Date"))
 
 #addes value for first column based on knowledge of last date. Could maybe automate later but unsure if thats really more efficient
-leaf.final <- leaf.final %>% transform(date_comp = ifelse(date_comp==0, 21, date_comp))
+#leaf.final <- leaf.final %>% transform(date_comp = ifelse(date_comp==0, 21, date_comp))
 
-#Using the date difference to calculate mass per day
-leaf.final$mass_per_day <- 0
 
-for(i in 1:nrow(leaf.final)){
-    n <- (leaf.final[i,"mass_g"]/leaf.final[i,"date_comp"])
-  leaf.final$mass_per_day[i] <- n
+#ordering the dataframe for the loop
+leaf.slope <- leaf.comb[with(leaf.comb, order(taxon, plot)),]
+
+#establishing the column and the first value. This is manual but makes this way easier.
+leaf.slope$date_comp <- 21
+
+#Creating a proper value for the amount of days between collections
+for(i in 1:nrow(leaf.slope)){
+  leaf.slope$date_comp[i+1] <- as.numeric(leaf.slope[i+1, "date_collection"] - leaf.slope[i, "date_collection"])
+  if(leaf.slope$date_comp[i+1] <= 0){
+    leaf.slope$date_comp[i+1] <- as.numeric(as.Date(leaf.slope[i+1, "date_collection"]) - as.Date("2018-08-10"))
+  }
 }
 
+#Calcualted the slope of C.N and mass across measurements
+leaf.slope$C.N_slope <- 0
+leaf.slope$mass_slope <- 0
+for(i in 1:nrow(leaf.slope)){
+  if(leaf.slope$plot[i] == leaf.slope$plot[i+1]){
+    n <- ((leaf.slope[i+1, "C.N"] - leaf.slope[i, "C.N"]) / leaf.slope[i, "date_comp"])
+    q <- ((leaf.slope[i+1, "mass_g"] - leaf.slope[i, "mass_g"]) / leaf.slope[i, "date_comp"])
+  }else{n=0
+        q=0
+  }
+  leaf.slope$C.N_slope[i+1] <- n
+  leaf.slope$mass_slope[i+1] <- q
+}
+
+#Using the date difference to calculate mass per day
+leaf.slope$mass_per_day <- (leaf.slope$mass_g / leaf.slope$date_comp)
+
 #Adding middate value for grpahical representation
+leaf.final <- leaf.slope
 leaf.final$date_collection <- as.Date(leaf.final$date_collection)
 leaf.final$mid_date <- as.Date((leaf.final$date_collection) - (leaf.final$date_comp/2))
 
 #Creating proportions. This is real messy but it works
 leaf.prop <- leaf.final %>%
               group_by(plot, date_collection) %>%
-              mutate(plot_mean = mean(C.N))
-
-
-leaf.prop <- leaf.prop %>%
-              group_by(plot, date_collection) %>%
-              mutate(sd = sd(C.N))
-
-leaf.prop <- leaf.prop %>%
-              group_by(plot, date_collection) %>%
-              mutate(taxon_count = length(unique(taxon)))
+              mutate(plot_mean = mean(C.N), sd = sd(C.N), taxon_count = length(unique(taxon)))
 
 leaf.prop <- leaf.prop %>% mutate(taxon_prop = C.N / taxon_count)
 
 
+taxonlist <- list("Ace. saccharum", "Que. alba", "Til. americana")
 
 ggplot(leaf.final, aes(x=mid_date, y=taxon, fill=mass_per_day, width=date_comp))+
   facet_wrap(~plot)+
@@ -111,6 +130,23 @@ ggplot(leaf.final, aes(x=mid_date, y=taxon, fill=mass_per_day, width=date_comp))
 
 
 #Visualizations
+ggplot(leaf.final)+
+  facet_wrap(taxon~plot)+
+  geom_line(aes(x=date_collection, y=C.N_slope, color = "C.N"))+
+  geom_point(aes(x=date_collection, y=C.N_slope, color = "C.N"))+
+  geom_line(aes(x=date_collection, y=mass_slope, color = "mass"))+
+  geom_point(aes(x=date_collection, y=mass_slope, color = "mass"))+
+  scale_x_date(labels = leaf.final$date_collection, 
+               breaks = leaf.final$date_collection) +
+  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
+  ggtitle("Slope of C:N over date over time")
+
+ggplot(leaf.final, aes(x=mass_slope, y = C.N_slope))+
+  facet_wrap(~taxon)+
+  geom_point(aes(color=plot))+
+  ggtitle("slope of C.N vs slope of mass_g")
+
+
 ggplot(leaf.final, aes(x=date_collection, y=C.N))+
   facet_wrap(~plot)+
   geom_line(aes(color=taxon))+
@@ -120,10 +156,11 @@ ggplot(leaf.final, aes(x=date_collection, y=C.N))+
   theme(axis.text.x = element_text(angle = 60, vjust=0.5))+
   ggtitle("C:N ratio over time")
 
-
 ggplot(leaf.final, aes(x=mass_per_day, y = C.N))+
-  geom_jitter()+
+  facet_wrap(~plot)+
+  geom_jitter(aes(color=taxon))+
   ggtitle("Mass_per_day vs. C:N")
+
 
 
 ggplot(leaf.final, aes(x=date_collection, y =C.N))+
