@@ -117,16 +117,15 @@ leaf.prop <- leaf.final %>%
 
 leaf.prop <- leaf.prop %>% mutate(taxon_prop = C.N / taxon_count)
 
+leaf.stats <- data.frame(rbind("B127", "HH115", "N115", "U134"))
+colnames(leaf.stats) <- c("plot")
 
-taxonlist <- list("Ace. saccharum", "Que. alba", "Til. americana")
-
-ggplot(leaf.final, aes(x=mid_date, y=taxon, fill=mass_per_day, width=date_comp))+
-  facet_wrap(~plot)+
-  geom_tile(color='white', aes(color=mid_date))+
-  scale_x_date(labels = leaf.final$date_collection, 
-               breaks = leaf.final$date_collection) +
-  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
-  ggtitle("mass_per_day over time periods by species")
+leaf.stats$mean <- tapply(leaf.final$C.N, leaf.final$plot, mean)
+leaf.stats$median <- tapply(leaf.final$C.N, leaf.final$plot, median)
+leaf.stats$range <- tapply(leaf.final$C.N, leaf.final$plot, range)
+leaf.stats$sd <- tapply(leaf.final$C.N, leaf.final$plot, sd)
+res.aov <- aov(C.N ~ plot, data = leaf.final)
+summary(res.aov)
 
 
 #Visualizations
@@ -190,6 +189,15 @@ ggplot(leaf.prop, aes(x=date_collection, y=taxon_prop))+
   theme(axis.text.x = element_text(angle = 60, vjust=0.5))+
   ggtitle("C.N ratio of each species in a plot")
   
+
+ggplot(leaf.final, aes(x=mid_date, y=taxon, fill=mass_per_day, width=date_comp))+
+  facet_wrap(~plot)+
+  geom_tile(color='white', aes(color=mid_date))+
+  scale_x_date(labels = leaf.final$date_collection, 
+               breaks = leaf.final$date_collection) +
+  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
+  ggtitle("mass_per_day over time periods by species")
+
 
 
 ggplot(leaf.final, aes(x=date_collection, y=mass_per_day))+
