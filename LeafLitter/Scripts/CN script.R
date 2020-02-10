@@ -158,7 +158,9 @@ ggplot(leaf.final, aes(x=date_collection, y=C.N))+
 ggplot(leaf.final, aes(x=mass_per_day, y = C.N))+
   facet_wrap(~plot)+
   geom_jitter(aes(color=taxon))+
-  ggtitle("Mass_per_day vs. C:N")
+  xlab("log10(mass_per_day)")+
+  scale_x_log10()+ scale_y_log10()+
+  ggtitle("log10 of Mass_per_day vs. C:N")
 
 
 
