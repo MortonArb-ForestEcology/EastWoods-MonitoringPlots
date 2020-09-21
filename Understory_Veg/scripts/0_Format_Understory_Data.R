@@ -13,7 +13,7 @@ get.understory <- function(YEAR, PLOTS=c("B-127", "U-134", "N-115", "HH-115")) {
   
   for(i in 1:length(PLOTS)){
     dat.plot <- googlesheets4::read_sheet(ss=sheet.key, sheet=PLOTS[i])
-    dat.plot <- dat.plot[!is.na(dat.plot$Name.Common),]
+    dat.plot <- as.data.frame(dat.plot[!is.na(dat.plot$Name.Common),])
     summary(dat.plot)
     
     # Get index for columns for the different categories; [] makes it read the dot
@@ -23,12 +23,13 @@ get.understory <- function(YEAR, PLOTS=c("B-127", "U-134", "N-115", "HH-115")) {
     # cols.notes <- cols.notes[2:length(cols.notes)]
     
     # Coverting the data to a long format
-    dat.long <- stack(dat.plot[,cols.cover])
+    dat.long <- stack(dat.plot[,cols.cover], drop=F)
     names(dat.long) <- c("Cover", "Obs.Date")
     dat.long$Obs.Date <- as.Date(substr(dat.long$Obs.Date, 1, 10), format="%Y.%m.%d")
     dat.long[, cols.meta] <- dat.plot[, cols.meta] 
-    dat.long$Phenophase.Codes <- stack(dat.plot[,cols.pheno])[,1]
-    dat.long$Notes <- stack(dat.plot[,cols.notes])[,1]
+    dat.long$Phenophase.Codes <- stack(dat.plot[,cols.pheno], drop=F)[,1]
+    dat.long$Notes <- stack(dat.plot[,cols.notes], drop=F)[,1]
+
     dat.long <- dat.long[,c(cols.meta, "Obs.Date", "Cover", "Phenophase.Codes", "Notes")]
     # Get rid of empty values
     dat.long <- dat.long[!is.na(dat.long$Cover),]
