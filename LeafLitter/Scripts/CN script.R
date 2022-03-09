@@ -12,10 +12,17 @@ setwd(path.l)
 litter.df <- googlesheets4::sheets_find("Leaf_Litter_Data")
 dat.lit <- data.frame(googlesheets4::sheets_read(litter.df, range='raw_data'))
 
+dat.lit <- read.csv("../GSHEET.csv")
+
+dat.lit$taxon <- paste0(substr(dat.lit$genus, 1, 3), ".", " ", dat.lit$species)
+
+dat.lit$taxon <- ifelse(grepl("unknown", dat.lit$taxon, fixed = TRUE), "unknown", dat.lit$taxon )
 #removing NA values created by fact that volunteers record plot and date in advance of acquiring data
 dat.leaf <- dat.lit[dat.lit$tissue=="leaf",]
 dat.leaf <- dat.leaf[!is.na(dat.leaf$trap_ID),]
 dat.leaf <- subset(dat.leaf, select=-c(1,7,9:13,15:16,18))
+dat.leaf$date_collection <- as.Date(dat.leaf$date_collection, "%m/%d/%Y")
+
 
 dat.agg <- aggregate(mass_g~date_collection+taxon+plot+tissue+genus+species, data=dat.leaf, mean)
 
@@ -92,11 +99,13 @@ for(i in 1:nrow(leaf.slope)){
 leaf.slope$C.N_slope <- 0
 leaf.slope$mass_slope <- 0
 for(i in 1:nrow(leaf.slope)){
-  if(leaf.slope$plot[i] == leaf.slope$plot[i+1]){
-    n <- ((leaf.slope[i+1, "C.N"] - leaf.slope[i, "C.N"]) / leaf.slope[i, "date_comp"])
-    q <- ((leaf.slope[i+1, "mass_g"] - leaf.slope[i, "mass_g"]) / leaf.slope[i, "date_comp"])
-  }else{n=0
-        q=0
+  if(i+1 <= nrow(leaf.slope)){
+    if(leaf.slope$plot[i] == leaf.slope$plot[i+1]){
+      n <- ((leaf.slope[i+1, "C.N"] - leaf.slope[i, "C.N"]) / leaf.slope[i, "date_comp"])
+      q <- ((leaf.slope[i+1, "mass_g"] - leaf.slope[i, "mass_g"]) / leaf.slope[i, "date_comp"])
+    }else{n=0
+          q=0
+    }
   }
   leaf.slope$C.N_slope[i+1] <- n
   leaf.slope$mass_slope[i+1] <- q
@@ -127,6 +136,30 @@ leaf.stats$sd <- tapply(leaf.final$C.N, leaf.final$plot, sd)
 res.aov <- aov(C.N ~ plot, data = leaf.final)
 summary(res.aov)
 
+#Visualizations
+#----------------------------------------------#
+png("figures/CN_ratio_over_time.png")
+ggplot(leaf.final, aes(x=date_collection, y=C.N))+
+  facet_wrap(~plot)+
+  geom_line(aes(color=taxon))+
+  geom_point(aes(color = taxon))+
+  scale_x_date(labels = leaf.final$date_collection, 
+               breaks = leaf.final$date_collection) +
+  theme(axis.text.x = element_text(angle = 60, vjust=0.5))+
+  ggtitle("C:N ratio over time")
+dev.off()
+
+png("figures/Mass_over_time.png")
+ggplot(leaf.final, aes(x=date_collection, y=mass_per_day))+
+  facet_wrap(~plot)+
+  geom_line(aes(color=taxon))+
+  geom_point(aes(color = taxon))+
+  scale_x_date(labels = leaf.final$date_collection, 
+               breaks = leaf.final$date_collection) +
+  theme(axis.text.x = element_text(angle = 60, vjust=0.5))+
+  ggtitle("mass_per_day over time")
+dev.off()
+
 
 #Visualizations
 ggplot(leaf.final)+
@@ -146,14 +179,7 @@ ggplot(leaf.final, aes(x=mass_slope, y = C.N_slope))+
   ggtitle("slope of C.N vs slope of mass_g")
 
 
-ggplot(leaf.final, aes(x=date_collection, y=C.N))+
-  facet_wrap(~plot)+
-  geom_line(aes(color=taxon))+
-  geom_point(aes(color = taxon))+
-  scale_x_date(labels = leaf.final$date_collection, 
-               breaks = leaf.final$date_collection) +
-  theme(axis.text.x = element_text(angle = 60, vjust=0.5))+
-  ggtitle("C:N ratio over time")
+
 
 ggplot(leaf.final, aes(x=mass_per_day, y = C.N))+
   facet_wrap(~plot)+
