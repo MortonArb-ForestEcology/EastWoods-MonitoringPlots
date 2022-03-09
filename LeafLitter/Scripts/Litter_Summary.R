@@ -7,12 +7,18 @@ library(lubridate)
 
 path.l <- "G:/My Drive/East Woods/Rollinson_Monitoring/Data/Leaf_litter_data/"
 
+#grabbing the file from google drive and making it a workable data frame
+#litter.df <- gs4_find("Leaf_Litter_Data")
+#dat.lit <- data.frame(sheets_read(litter.df, range='raw_data'))
+
+dat.lit <- read.csv("../GSHEET.csv")
+
 setwd(path.l)
 
-#grabbing the file from google drive and making it a workable data frame
-litter.df <- sheets_find("Leaf_Litter_Data")
-dat.lit <- data.frame(sheets_read(litter.df, range='raw_data'))
+dat.lit$taxon <- paste0(substr(dat.lit$genus, 1, 3), ".", " ", dat.lit$species)
+dat.lit <- dat.lit[dat.lit$taxon != ". ",]
 
+dat.lit$taxon <- ifelse(grepl("unknown", dat.lit$taxon, fixed = TRUE), "unknown", dat.lit$taxon )
 #adding a sqaured mass column and month column for different explorations
 dat.lit <- dat.lit %>% mutate(mass.sqrt = sqrt(mass_g),
                               month = format(date_collection, format="%m/%d"))
@@ -25,8 +31,11 @@ dat.lit <- dat.lit[!is.na(dat.lit$trap_ID),]
 #working with just leaf tissue
 dat.leaf <- dat.lit[dat.lit$tissue=="leaf",]
 dat.leaf <- dat.leaf[!is.na(dat.leaf$trap_ID),]
+dat.leaf$date_collection <- as.Date(dat.leaf$date_collection, "%m/%d/%Y")
 dat.leaf <- dat.leaf[order(dat.leaf$date_collection),]
-dat.leafdate <- aggregate(mass_g~date_collection+taxon, data=dat.leaf, mean)
+dat.leafdate <- aggregate(mass_g~date_collection+plot+taxon, data=dat.leaf, mean)
+
+
 
 dat.leafdate$date_comp <- 0
 #loop to create value of the differences between dates
@@ -54,11 +63,57 @@ for(i in 1:nrow(dat.leafdate)){
 dat.leafdate$mid_date <- (as.Date(dat.leafdate$date_collection) - (dat.leafdate$date_comp/2))
 
 #removes unknown leaf litter and general "Quercus" id's. Optional part to be run
-dat.leafdate <- select(filter(dat.leafdate, taxon!= "unknown"),c(date_collection, taxon, mass_g, date_comp, mass_per_day, mid_date))
-dat.leafdate <- select(filter(dat.leafdate, taxon!= "Quercus"),c(date_collection, taxon, mass_g, date_comp, mass_per_day, mid_date))
+#dat.leafdate <- select(filter(dat.leafdate, taxon!= "Quercus"),c(date_collection, taxon, mass_g, date_comp, mass_per_day, mid_date))
+dat.leafdate <- dat.leafdate[dat.leafdate$taxon != "unknown",]
 
-ggplot(dat.leafdateq, aes(x=mid_date, y=taxon, fill=mass_per_day, width=date_comp))+
+#-------------------------------------------------------#
+#Visualizations
+#-------------------------------------------------------#
+
+png("figures/Square_root_of_mass_by_species")
+ggboxplot(dat.leaf, x = "taxon", y = "mass.sqrt", 
+          color = "taxon",
+          facet.by = "plot",
+          ylab = "Square root of Mass (g)", xlab = "Taxon", 
+          title = "(Raw) Sqaure root of Mass of Leaf Tissue",
+          legend = "right") +
+  theme(axis.text.x = element_blank(), plot.title = element_text(hjust=0.5))+
+  facet_wrap(~plot, scales = "fixed")
+dev.off()
+
+png("figures/Square_root_of_mass_by_plot")
+ggboxplot(dat.leaf, x = "plot", y = "mass.sqrt", 
+          color = "plot",
+          ylab = "Square root of Mass (g)", xlab = "Plot", 
+          title = "(Raw) Sqaure root of Mass of Leaf Tissue",
+          legend = "right") +
+  theme(axis.text.x = element_blank(), plot.title = element_text(hjust=0.5))
+dev.off()
+
+dat.leafdate$month <- month.abb[month(dat.leafdate$date_collection)]
+
+dat.leafdate$month <- factor(dat.leafdate$month, levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"))
+
+png("figures/mass_per_day by month")
+ggplot(dat.leafdate)+
+  #facet_wrap(~plot)+
+  geom_boxplot(aes(x=month, y = mass_per_day, color = plot))+
+  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
+  ggtitle("mass/day by month")
+#scale_x_date(date_breaks="1 month", date_labels = "%b-%y")
+dev.off()
+
+
+ggplot(dat.leafdate, aes(x=mid_date, y=taxon, fill=mass_per_day, width=date_comp))+
   geom_tile(color='white', aes(color=mid_date))+
+  theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
+  ggtitle("mass/day over time periods by species")+
+  scale_x_date(date_breaks="1 month", date_labels = "%b-%y")
+
+ggplot(dat.leafdate)+
+  facet_wrap(~plot)+
+  geom_line(aes(x=date_collection, y = mass_per_day, color = taxon))+
+  geom_point(aes(x=date_collection, y = mass_per_day, color = taxon))+
   theme(axis.text.x = element_text(size=8, angle=60, vjust=0.6))+
   ggtitle("mass/day over time periods by species")+
   scale_x_date(date_breaks="1 month", date_labels = "%b-%y")
@@ -91,7 +146,7 @@ ggplot(dat.lit, aes(plot))+
 
 
 #boxplot to visualize differences
-ggboxplot(dat.lit, x = "taxon", y = "mass_g", 
+ggboxplot(dat.lit[dat.lit$taxon != "unknown",], x = "taxon", y = "mass_g", 
           color = "taxon",
           facet.by = "plot",
           ylab = "Mass (g)", xlab = "Plot", 
