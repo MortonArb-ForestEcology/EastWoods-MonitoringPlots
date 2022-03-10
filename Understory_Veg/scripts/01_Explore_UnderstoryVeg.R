@@ -122,9 +122,10 @@ yr.richness <- ggplot(data=bd.yr) +
   theme_linedraw() + theme.meghan
 
 
-png(file.path(path.figs, "UnderstoryVegetation_Cover_Richness.png"), height=6, width=8, units="in", res=220)
-cowplot::plot_grid(plot.cover, yr.hprime, plot.richness, yr.richness, ncol=2, rel_widths = c(0.67, 0.33))
+png(file.path(path.figs, "UnderstoryVegetation_Cover_Richness_v2.png"), height=6, width=12, units="in", res=220)
+cowplot::plot_grid(plot.cover, yr.hprime, plot.richness, yr.richness, ncol=2, rel_widths = c(0.6, 0.4))
 dev.off()
+
 ####################################
 # Begin playing with the phenology data, but nothing really clear
 ####################################3
