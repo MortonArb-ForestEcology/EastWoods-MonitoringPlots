@@ -6,6 +6,8 @@ get.understory <- function(YEAR, PLOTS=c("B-127", "U-134", "N-115", "HH-115")) {
   if(YEAR==2020) sheet.key = "1OWPKXBXvdfDZuvNPJFAViaBTVI4MO9i3Yb4uue5gzog"
   if(YEAR==2021) sheet.key = "1Dw5vM2QvGuXlv1NxH64wDVv2Cq-oD8E9E2vbcq500lg"
   if(YEAR==2022) sheet.key = "1E4tXvq-j0jbzdSBygsyN5ty2TfPqai5Cx_2KlVbz7K0"
+  if(YEAR==2023) sheet.key = "1DeTGD_zf5hEMrGlxmjU0eavEJ7fEpxDvjHe2hTaUqYE"
+  if(YEAR==2024) sheet.key = "1ELs5aMlAiQuXFha0ZtYXTMWxgyCZpSWQhnMgjRemzPQ"
   
   # Creating a blank data frame
   dat.pheno <- data.frame()
@@ -23,6 +25,8 @@ get.understory <- function(YEAR, PLOTS=c("B-127", "U-134", "N-115", "HH-115")) {
     cols.cover <- grep("[.]Cover", names(dat.plot))
     cols.pheno <- grep("[.]Phenophase", names(dat.plot))
     cols.notes <- grep("[.]Notes", names(dat.plot))
+    length(cols.cover); length(cols.pheno); length(cols.notes)
+    if(length(cols.cover)!=length(cols.pheno) |  length(cols.cover)!=length(cols.notes)) stop("Check column names! Uneven number of cover/phenophase/notes columns")
     # cols.notes <- cols.notes[2:length(cols.notes)]
     
     
@@ -34,7 +38,11 @@ get.understory <- function(YEAR, PLOTS=c("B-127", "U-134", "N-115", "HH-115")) {
     dat.long[, cols.meta] <- dat.plot[, cols.meta] 
     dat.long$Phenophase.Codes <- stack(dat.plot[,cols.pheno], drop=F)[,1]
     dat.long$Notes <- stack(dat.plot[,cols.notes], drop=F)[,1]
-
+    # # # Diagnosing problematic columns
+    # test <- stack(dat.plot[,cols.cover[1:14]], drop=F) # col 15 is the problem
+    # dat.plot[,cols.cover[15]]
+    # names(dat.plot)[cols.cover[15]]
+    
     dat.long <- dat.long[,c(cols.meta, "Obs.Date", "Cover", "Phenophase.Codes", "Notes")]
     # Get rid of empty values
     dat.long <- dat.long[!is.na(dat.long$Cover),]
@@ -58,6 +66,8 @@ get.understory <- function(YEAR, PLOTS=c("B-127", "U-134", "N-115", "HH-115")) {
   }
   
   summary(dat.pheno)
+  dat.pheno[is.na(dat.pheno$Species),]
+  
   return(dat.pheno)
 }
 

@@ -2,8 +2,9 @@
 library(ggplot2)
 source("0_Format_Understory_Data.R")
 
-path.google <- "/Volumes/GoogleDrive/My Drive/East Woods/Rollinson_Monitoring/Data/Understory_Vegetation/"
+path.google <- "~/Google Drive/My Drive/East Woods/Rollinson_Monitoring/Data/Understory_Vegetation/"
 path.figs <- file.path(path.google, "figures")
+path.save <- file.path(path.google, "UnderstoryData_clean_forArchiving")
 dir.create(path.figs, recursive = T, showWarnings = F)
 
 # Using a formatting theme consistent with what Meghan has done
@@ -20,16 +21,39 @@ theme.meghan <-   theme(panel.grid.major = element_blank(),
 
 # Load the understory data
 # # NOTE: I haven't done any species harmonization, so lets not do community comparisions yet
-yrs.ew <- 2019:2021
-dat.veg <- data.frame()
+yrs.ew <- 2019:2023
+dat.veg <- list()
 for(YR in yrs.ew){
   dat.yr <- get.understory(YEAR=YR)
   dat.yr <- dat.yr[dat.yr$Name.Common!="NOTHING" & dat.yr$Cover>0 & !is.na(dat.yr$Phenophase.Codes),]
   
-  dat.veg <- rbind(dat.veg, dat.yr)
+  dat.veg[[paste(YR)]] <- dat.yr
 }
 
-summary(dat.veg)
+summary(dat.veg[["2019"]])
+summary(dat.veg[["2020"]])
+summary(dat.veg[["2021"]])
+summary(dat.veg[["2022"]])
+summary(dat.veg[["2023"]])
+
+summary(dat.veg[["2019"]][is.na(dat.veg$`2019`$Species),])
+summary(dat.veg[["2020"]][is.na(dat.veg$`2020`$Species),])
+summary(dat.veg[["2021"]][is.na(dat.veg$`2021`$Species),])
+summary(dat.veg[["2022"]][is.na(dat.veg$`2022`$Species),])
+summary(dat.veg[["2023"]][is.na(dat.veg$`2023`$Species),])
+
+for(YR in names(dat.veg)){
+  write.csv(dat.veg[[YR]], file.path(path.save, paste0("MortonArb_EastWoods_Understory_Vegetation_", YR, ".csv")), row.names=F)
+}
+
+
+# test <- read.csv("MortonArb_EastWoods_Understory_Vegetation_2019.csv")
+# head(test)
+
+
+########################
+# Needs to be updated!
+########################
 dat.veg$Genus <- as.character(dat.veg$Genus)
 dat.veg$Species <- as.character(dat.veg$Species)
 dat.veg[!is.na(dat.veg$Phenophase.Codes) & is.na(dat.veg$Genus),c("Genus", "Species")] <- "Unknown"
