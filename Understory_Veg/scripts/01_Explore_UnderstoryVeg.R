@@ -44,22 +44,8 @@ summary(dat.veg[["2022"]][is.na(dat.veg$`2022`$Species),])
 summary(dat.veg[["2023"]][is.na(dat.veg$`2023`$Species),])
 
 summary(as.factor(dat.veg[["2019"]]$GenusSpecies))
-summary(dat.veg[["2019"]][dat.veg$`2019`$GenusSpecies=="ACER SACHHARUM",]) # **
-summary(dat.veg[["2019"]][dat.veg$`2019`$GenusSpecies=="AGERANTINA ALTISSIMA",])# **
-summary(dat.veg[["2019"]][dat.veg$`2019`$GenusSpecies=="CERCAEA LUTETIANA",])# **
-summary(dat.veg[["2019"]][dat.veg$`2019`$GenusSpecies=="CIRACAEA LUTETIANA",]) #**
-summary(dat.veg[["2019"]][dat.veg$`2019`$Genus=="GALLIUM",]) #**
-summary(dat.veg[["2019"]][dat.veg$`2019`$Species=="VIRGINANA",])
-summary(dat.veg[["2019"]][dat.veg$`2019`$Genus=="SYMPHOTRICHUM",]) #**
-
 summary(as.factor(dat.veg[["2020"]]$GenusSpecies))
-summary(dat.veg[["2020"]][dat.veg$`2020`$Genus=="GALIUM TRIFLORUM",])
-
-
 summary(as.factor(dat.veg[["2021"]]$GenusSpecies))
-summary(dat.veg[["2021"]][dat.veg$`2021`$Genus=="MIANTHEMUN",])
-summary(dat.veg[["2021"]][dat.veg$`2021`$Genus=="SEDGE",])
-summary(dat.veg[["2021"]][dat.veg$`2021`$Species=="PETAYUM",])
 
 summary(as.factor(dat.veg[["2022"]]$GenusSpecies))
 summary(as.factor(dat.veg[["2023"]]$GenusSpecies))
@@ -98,8 +84,8 @@ summary(dat.veg)
 
 sort(unique(dat.veg$GenusSpecies[!grepl("UNKNOWN", dat.veg$GenusSpecies)]))
 
-veg.summary <- aggregate(Cover ~ Plot + Subplot + Obs.Date + year + month+ week + yday, data=dat.veg, FUN=sum)
-veg.summary$Richness <- aggregate(Cover ~ Plot + Subplot + Obs.Date + year + month + week + yday, data=dat.veg, FUN=length)$Cover
+veg.summary <- aggregate(Cover ~ Plot + Subplot + Obs.Date + year + yday, data=dat.veg, FUN=sum)
+veg.summary$Richness <- aggregate(Cover ~ Plot + Subplot + Obs.Date + year + yday, data=dat.veg, FUN=length)$Cover
 summary(veg.summary)
 
 # Add in missing 2020 dates
@@ -109,7 +95,7 @@ veg.summary$Plot <- factor(veg.summary$Plot, levels=c("B-127", "U-134", "N-115",
 veg.graph <- veg.summary$year!=2020 | (veg.summary$year==2020 & veg.summary$Obs.Date>as.Date("2020-05-01"))
 
 plot.cover <- ggplot(data=veg.summary[veg.graph,], aes(x=Obs.Date, y=Cover)) +
-  # facet_wrap(~Plot) +
+  # facet_grid(.~Plot) +
   geom_ribbon(data=veg.summary[veg.summary$year<2020,], aes(fill=Plot), stat="summary", fun.ymin=min, fun.ymax=max, alpha=0.5) +
   geom_line(data=veg.summary[veg.summary$year<2020 ,], aes(color=Plot), stat="summary", fun.y=mean) +
 geom_ribbon(data=veg.summary[veg.summary$year==2020 & veg.summary$Obs.Date>as.Date("2020-05-01"),], aes(fill=Plot), stat="summary", fun.ymin=min, fun.ymax=max, alpha=0.5) +
@@ -119,7 +105,7 @@ geom_ribbon(data=veg.summary[veg.summary$year==2020 & veg.summary$Obs.Date>as.Da
   labs(x="Observation Date", y="Total Veg Cover") +
   scale_fill_brewer(palette = "Dark2") +
   scale_color_brewer(palette = "Dark2") +
-  theme_linedraw() + theme.meghan + theme(legend.position="none")
+  theme_linedraw() + theme.meghan + theme(legend.position="right")
 
 plot.richness <- ggplot(data=veg.summary[veg.graph,], aes(x=Obs.Date, y=Richness)) +
   # facet_wrap(~Plot) +
@@ -132,7 +118,7 @@ plot.richness <- ggplot(data=veg.summary[veg.graph,], aes(x=Obs.Date, y=Richness
   labs(x="Observation Date", y="Species Richness") +
   scale_fill_brewer(palette = "Dark2") +
   scale_color_brewer(palette = "Dark2") +
-  theme_linedraw() + theme.meghan + theme(legend.position="none")
+  theme_linedraw() + theme.meghan + theme(legend.position="right")
 
 
 
