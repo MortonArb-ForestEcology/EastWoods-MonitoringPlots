@@ -16,7 +16,7 @@ theme.meghan <-   theme(panel.grid.major = element_blank(),
                         axis.text.x= element_text(margin = margin(t = 10), size=12),
                         axis.text.y=element_text(margin = margin(r = 10), size=12),
                         axis.ticks.length=unit(-0.3, "cm"),
-                        axis.ticks.margin=unit(0.5, "cm"),
+                        # axis.ticks.margin=unit(0.5, "cm"),
                         axis.ticks = element_line(colour = "black", size = 0.4))
 
 # Load the understory data
@@ -26,6 +26,7 @@ dat.veg <- list()
 for(YR in yrs.ew){
   dat.yr <- get.understory(YEAR=YR)
   dat.yr <- dat.yr[dat.yr$Name.Common!="NOTHING" & dat.yr$Cover>0 & !is.na(dat.yr$Phenophase.Codes),]
+  # dat.yr$GenusSpecies <- paste(dat.yr$Genus, dat.yr$Species)
   
   dat.veg[[paste(YR)]] <- dat.yr
 }
@@ -42,6 +43,28 @@ summary(dat.veg[["2021"]][is.na(dat.veg$`2021`$Species),])
 summary(dat.veg[["2022"]][is.na(dat.veg$`2022`$Species),])
 summary(dat.veg[["2023"]][is.na(dat.veg$`2023`$Species),])
 
+summary(as.factor(dat.veg[["2019"]]$GenusSpecies))
+summary(dat.veg[["2019"]][dat.veg$`2019`$GenusSpecies=="ACER SACHHARUM",]) # **
+summary(dat.veg[["2019"]][dat.veg$`2019`$GenusSpecies=="AGERANTINA ALTISSIMA",])# **
+summary(dat.veg[["2019"]][dat.veg$`2019`$GenusSpecies=="CERCAEA LUTETIANA",])# **
+summary(dat.veg[["2019"]][dat.veg$`2019`$GenusSpecies=="CIRACAEA LUTETIANA",]) #**
+summary(dat.veg[["2019"]][dat.veg$`2019`$Genus=="GALLIUM",]) #**
+summary(dat.veg[["2019"]][dat.veg$`2019`$Species=="VIRGINANA",])
+summary(dat.veg[["2019"]][dat.veg$`2019`$Genus=="SYMPHOTRICHUM",]) #**
+
+summary(as.factor(dat.veg[["2020"]]$GenusSpecies))
+summary(dat.veg[["2020"]][dat.veg$`2020`$Genus=="GALIUM TRIFLORUM",])
+
+
+summary(as.factor(dat.veg[["2021"]]$GenusSpecies))
+summary(dat.veg[["2021"]][dat.veg$`2021`$Genus=="MIANTHEMUN",])
+summary(dat.veg[["2021"]][dat.veg$`2021`$Genus=="SEDGE",])
+summary(dat.veg[["2021"]][dat.veg$`2021`$Species=="PETAYUM",])
+
+summary(as.factor(dat.veg[["2022"]]$GenusSpecies))
+summary(as.factor(dat.veg[["2023"]]$GenusSpecies))
+
+
 for(YR in names(dat.veg)){
   write.csv(dat.veg[[YR]], file.path(path.save, paste0("MortonArb_EastWoods_Understory_Vegetation_", YR, ".csv")), row.names=F)
 }
@@ -54,15 +77,26 @@ for(YR in names(dat.veg)){
 ########################
 # Needs to be updated!
 ########################
-dat.veg$Genus <- as.character(dat.veg$Genus)
-dat.veg$Species <- as.character(dat.veg$Species)
-dat.veg[!is.na(dat.veg$Phenophase.Codes) & is.na(dat.veg$Genus),c("Genus", "Species")] <- "Unknown"
+files.past <- dir(path.save)
 
+dat.veg <- data.frame()
+for(i in seq_along(files.past)){
+  datNow <- read.csv(file.path(path.save, files.past[i]))
+  
+  dat.veg <- rbind(dat.veg, datNow)
+}
+summary(dat.veg)
+dat.veg$Plot <- as.factor(dat.veg$Plot)
+dat.veg$Subplot <- as.factor(dat.veg$Subplot)
+dat.veg$Obs.Date <- as.Date(dat.veg$Obs.Date)
 dat.veg$year <- lubridate::year(dat.veg$Obs.Date)
 dat.veg$yday <- lubridate::yday(dat.veg$Obs.Date)
-dat.veg$week <- lubridate::week(dat.veg$Obs.Date)
-dat.veg$month <- lubridate::month(dat.veg$Obs.Date)
+dat.veg$Genus <- as.factor(dat.veg$Genus)
+dat.veg$Species <- as.factor(dat.veg$Species)
+dat.veg$GenusSpecies <-as.factor( paste(dat.veg$Genus, dat.veg$Species))
 summary(dat.veg)
+
+sort(unique(dat.veg$GenusSpecies[!grepl("UNKNOWN", dat.veg$GenusSpecies)]))
 
 veg.summary <- aggregate(Cover ~ Plot + Subplot + Obs.Date + year + month+ week + yday, data=dat.veg, FUN=sum)
 veg.summary$Richness <- aggregate(Cover ~ Plot + Subplot + Obs.Date + year + month + week + yday, data=dat.veg, FUN=length)$Cover
