@@ -17,7 +17,12 @@ theme.meghan <-   theme(panel.grid.major = element_blank(),
                         axis.text.y=element_text(margin = margin(r = 10), size=12),
                         axis.ticks.length=unit(-0.3, "cm"),
                         # axis.ticks.margin=unit(0.5, "cm"),
-                        axis.ticks = element_line(colour = "black", size = 0.4))
+                        axis.ticks = element_line(colour = "black", linewidth = 0.4))
+
+plotOrder <- c("B-127", "U-134", "N-115", "HH-115")
+ewPlotColors <- c("#1B9E77","#D95F02", "#7570B3", "#E7298A")
+names(ewPlotColors) = plotOrder
+ewPlotColors
 
 # Load the understory data
 # # NOTE: I haven't done any species harmonization, so lets not do community comparisions yet
@@ -90,7 +95,7 @@ summary(veg.summary)
 
 # Add in missing 2020 dates
 
-veg.summary$Plot <- factor(veg.summary$Plot, levels=c("B-127", "U-134", "N-115", "HH-115"))
+veg.summary$Plot <- factor(veg.summary$Plot, levels=plotOrder)
 
 veg.graph <- veg.summary$year!=2020 | (veg.summary$year==2020 & veg.summary$Obs.Date>as.Date("2020-05-01"))
 
@@ -103,8 +108,8 @@ geom_ribbon(data=veg.summary[veg.summary$year==2020 & veg.summary$Obs.Date>as.Da
   geom_ribbon(data=veg.summary[veg.summary$year>2020,], aes(fill=Plot), stat="summary", fun.ymin=min, fun.ymax=max, alpha=0.5) +
   geom_line(data=veg.summary[veg.summary$year>2020 ,], aes(color=Plot), stat="summary", fun.y=mean) +
   labs(x="Observation Date", y="Total Veg Cover") +
-  scale_fill_brewer(palette = "Dark2") +
-  scale_color_brewer(palette = "Dark2") +
+  scale_fill_brewer(values=ewPlotColors) +
+  scale_color_brewer(values=ewPlotColors) +
   theme_linedraw() + theme.meghan + theme(legend.position="right")
 
 plot.richness <- ggplot(data=veg.summary[veg.graph,], aes(x=Obs.Date, y=Richness)) +
@@ -116,8 +121,8 @@ plot.richness <- ggplot(data=veg.summary[veg.graph,], aes(x=Obs.Date, y=Richness
   geom_ribbon(data=veg.summary[veg.summary$year>2020,], aes(fill=Plot), stat="summary", fun.ymin=min, fun.ymax=max, alpha=0.5) +
   geom_line(data=veg.summary[veg.summary$year>2020 ,], aes(color=Plot), stat="summary", fun.y=mean) +
   labs(x="Observation Date", y="Species Richness") +
-  scale_fill_brewer(palette = "Dark2") +
-  scale_color_brewer(palette = "Dark2") +
+  scale_fill_brewer(values=ewPlotColors) +
+  scale_color_brewer(values=ewPlotColors) +
   theme_linedraw() + theme.meghan + theme(legend.position="right")
 
 
@@ -150,19 +155,21 @@ bd.yr$Hprime <- aggregate(prop ~ Plot + Subplot + year, data=spp.yr, FUN=functio
 summary(bd.yr)
 
 
+bd.yr$Plot <- factor(bd.yr$Plot, levels=plotOrder)
+
 yr.hprime <- ggplot(data=bd.yr) +
   geom_boxplot(aes(x=as.factor(year), y=Hprime, fill=Plot)) +
   labs(x="Year", y="Shannon BD (H')") +
-  scale_fill_brewer(palette = "Dark2") +
-  scale_color_brewer(palette = "Dark2") +
+  scale_fill_manual(values=ewPlotColors) +
+  scale_color_manual(values=ewPlotColors) +
   theme_linedraw() + theme.meghan
 
 
 yr.richness <- ggplot(data=bd.yr) +
   geom_boxplot(aes(x=as.factor(year), y=Richness, fill=Plot)) +
   labs(x="Year", y="Species Richness") +
-  scale_fill_brewer(palette = "Dark2") +
-  scale_color_brewer(palette = "Dark2") +
+  scale_fill_brewer(values=ewPlotColors) +
+  scale_color_brewer(values=ewPlotColors) +
   theme_linedraw() + theme.meghan
 
 
