@@ -17,7 +17,7 @@ get.understory <- function(YEAR, PLOTS=c("B-127", "U-134", "N-115", "HH-115")) {
   
   for(i in 1:length(PLOTS)){
     dat.plot <- googlesheets4::read_sheet(ss=sheet.key, sheet=PLOTS[i])
-    dat.plot <- as.data.frame(dat.plot[!is.na(dat.plot$Name.Common),])
+    dat.plot <- as.data.frame(dat.plot[!is.na(dat.plot$Name.Common) & !dat.plot$Genus %in% c("VEG", "BARE", "RESTRICTED", "BURN"),])
     # dat.plot[is.null(dat.plot)] <- NA
     summary(dat.plot)
     
@@ -31,17 +31,26 @@ get.understory <- function(YEAR, PLOTS=c("B-127", "U-134", "N-115", "HH-115")) {
     
     
     # Coverting the data to a long format
-    # NOTE: If you get issues here, there's probably a problem with the headers OR there's a text string in one of the cover columns that makes values NULL instead of NA.
-    dat.long <- stack(dat.plot[,cols.cover], drop=F)
-    names(dat.long) <- c("Cover", "Obs.Date")
-    dat.long$Obs.Date <- as.Date(substr(dat.long$Obs.Date, 1, 10), format="%Y.%m.%d")
-    dat.long[, cols.meta] <- dat.plot[, cols.meta] 
-    dat.long$Phenophase.Codes <- stack(dat.plot[,cols.pheno], drop=F)[,1]
-    dat.long$Notes <- stack(dat.plot[,cols.notes], drop=F)[,1]
-    # # # Diagnosing problematic columns
-    # test <- stack(dat.plot[,cols.cover[1:14]], drop=F) # col 15 is the problem
-    # dat.plot[,cols.cover[15]]
-    # names(dat.plot)[cols.cover[15]]
+    if(length(cols.cover)>1){
+      # NOTE: If you get issues here, there's probably a problem with the headers OR there's a text string in one of the cover columns that makes values NULL instead of NA.
+      dat.long <- stack(dat.plot[,cols.cover], drop=F)
+      names(dat.long) <- c("Cover", "Obs.Date")
+      dat.long$Obs.Date <- as.Date(substr(dat.long$Obs.Date, 1, 10), format="%Y.%m.%d")
+      dat.long[, cols.meta] <- dat.plot[, cols.meta] 
+      dat.long$Phenophase.Codes <- stack(dat.plot[,cols.pheno], drop=F)[,1]
+      dat.long$Notes <- stack(dat.plot[,cols.notes], drop=F)[,1]
+      # # # Diagnosing problematic columns
+      # test <- stack(dat.plot[,cols.cover[1:14]], drop=F) # col 15 is the problem
+      # dat.plot[,cols.cover[15]]
+      # names(dat.plot)[cols.cover[15]]
+    } else {
+      dat.long <- data.frame(Cover=dat.plot[,cols.cover],
+                             Obs.Date = as.Date(substr(names(dat.plot)[cols.cover], 1, 10), format="%Y.%m.%d"))
+      dat.long[, cols.meta] <- dat.plot[, cols.meta] 
+      dat.long[,c("Phenophase.Codes", "Notes")] <- dat.plot[,c(cols.pheno, cols.notes)]
+
+    }
+    
     
     dat.long <- dat.long[,c(cols.meta, "Obs.Date", "Cover", "Phenophase.Codes", "Notes")]
     # Get rid of empty values

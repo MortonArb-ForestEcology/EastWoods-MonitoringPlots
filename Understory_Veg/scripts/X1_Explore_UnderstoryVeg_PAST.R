@@ -26,7 +26,7 @@ ewPlotColors
 
 # Load the understory data
 # # NOTE: I haven't done any species harmonization, so lets not do community comparisions yet
-yrs.ew <- 2019:2023
+yrs.ew <- 2019:2024
 dat.veg <- list()
 for(YR in yrs.ew){
   dat.yr <- get.understory(YEAR=YR)
@@ -36,24 +36,26 @@ for(YR in yrs.ew){
   dat.veg[[paste(YR)]] <- dat.yr
 }
 
-summary(dat.veg[["2019"]])
-summary(dat.veg[["2020"]])
-summary(dat.veg[["2021"]])
-summary(dat.veg[["2022"]])
-summary(dat.veg[["2023"]])
+# summary(dat.veg[["2019"]])
+# summary(dat.veg[["2020"]])
+# summary(dat.veg[["2021"]])
+# summary(dat.veg[["2022"]])
+# summary(dat.veg[["2023"]])
+summary(dat.veg[["2024"]])
 
-summary(dat.veg[["2019"]][is.na(dat.veg$`2019`$Species),])
-summary(dat.veg[["2020"]][is.na(dat.veg$`2020`$Species),])
-summary(dat.veg[["2021"]][is.na(dat.veg$`2021`$Species),])
-summary(dat.veg[["2022"]][is.na(dat.veg$`2022`$Species),])
-summary(dat.veg[["2023"]][is.na(dat.veg$`2023`$Species),])
+# summary(dat.veg[["2019"]][is.na(dat.veg$`2019`$Species),])
+# summary(dat.veg[["2020"]][is.na(dat.veg$`2020`$Species),])
+# summary(dat.veg[["2021"]][is.na(dat.veg$`2021`$Species),])
+# summary(dat.veg[["2022"]][is.na(dat.veg$`2022`$Species),])
+# summary(dat.veg[["2023"]][is.na(dat.veg$`2023`$Species),])
+summary(dat.veg[["2024"]][is.na(dat.veg$`2024`$Species),])
 
-summary(as.factor(dat.veg[["2019"]]$GenusSpecies))
-summary(as.factor(dat.veg[["2020"]]$GenusSpecies))
-summary(as.factor(dat.veg[["2021"]]$GenusSpecies))
-
-summary(as.factor(dat.veg[["2022"]]$GenusSpecies))
-summary(as.factor(dat.veg[["2023"]]$GenusSpecies))
+# summary(as.factor(dat.veg[["2019"]]$GenusSpecies))
+# summary(as.factor(dat.veg[["2020"]]$GenusSpecies))
+# summary(as.factor(dat.veg[["2021"]]$GenusSpecies))
+# summary(as.factor(dat.veg[["2022"]]$GenusSpecies))
+# summary(as.factor(dat.veg[["2023"]]$GenusSpecies))
+summary(as.factor(dat.veg[["2024"]]$GenusSpecies))
 
 
 for(YR in names(dat.veg)){
@@ -82,6 +84,8 @@ dat.veg$Subplot <- as.factor(dat.veg$Subplot)
 dat.veg$Obs.Date <- as.Date(dat.veg$Obs.Date)
 dat.veg$year <- lubridate::year(dat.veg$Obs.Date)
 dat.veg$yday <- lubridate::yday(dat.veg$Obs.Date)
+dat.veg$month <- lubridate::month(dat.veg$Obs.Date)
+dat.veg$week <- lubridate::week(dat.veg$Obs.Date)
 dat.veg$Genus <- as.factor(dat.veg$Genus)
 dat.veg$Species <- as.factor(dat.veg$Species)
 dat.veg$GenusSpecies <-as.factor( paste(dat.veg$Genus, dat.veg$Species))
@@ -108,8 +112,8 @@ geom_ribbon(data=veg.summary[veg.summary$year==2020 & veg.summary$Obs.Date>as.Da
   geom_ribbon(data=veg.summary[veg.summary$year>2020,], aes(fill=Plot), stat="summary", fun.ymin=min, fun.ymax=max, alpha=0.5) +
   geom_line(data=veg.summary[veg.summary$year>2020 ,], aes(color=Plot), stat="summary", fun.y=mean) +
   labs(x="Observation Date", y="Total Veg Cover") +
-  scale_fill_brewer(values=ewPlotColors) +
-  scale_color_brewer(values=ewPlotColors) +
+  scale_fill_manual(values=ewPlotColors) +
+  scale_color_manual(values=ewPlotColors) +
   theme_linedraw() + theme.meghan + theme(legend.position="right")
 
 plot.richness <- ggplot(data=veg.summary[veg.graph,], aes(x=Obs.Date, y=Richness)) +
@@ -121,8 +125,8 @@ plot.richness <- ggplot(data=veg.summary[veg.graph,], aes(x=Obs.Date, y=Richness
   geom_ribbon(data=veg.summary[veg.summary$year>2020,], aes(fill=Plot), stat="summary", fun.ymin=min, fun.ymax=max, alpha=0.5) +
   geom_line(data=veg.summary[veg.summary$year>2020 ,], aes(color=Plot), stat="summary", fun.y=mean) +
   labs(x="Observation Date", y="Species Richness") +
-  scale_fill_brewer(values=ewPlotColors) +
-  scale_color_brewer(values=ewPlotColors) +
+  scale_fill_manual(values=ewPlotColors) +
+  scale_color_manual(values=ewPlotColors) +
   theme_linedraw() + theme.meghan + theme(legend.position="right")
 
 
@@ -195,40 +199,41 @@ pheno.spp.plot.mo <- aggregate(Subplot ~ Phenophase + Plot + year + month+ Genus
 
 
 ggplot(data=pheno.spp.plot[,]) +
-  facet_wrap(~Plot) +
-  geom_boxplot(aes(x=Obs.Date, fill=Phenophase), position="dodge") #+
-  # scale_fill_brewer(palette = "Dark2") +
-  # scale_color_brewer(palette = "Dark2")
+  facet_grid(year~Plot) +
+  geom_boxplot(aes(x=yday, fill=Phenophase), position="dodge") #+
+  # scale_fill_manual(palette = "Dark2") +
+  # scale_color_manual(palette = "Dark2")
 
 ggplot(data=pheno.spp.plot.mo[,]) +
   facet_grid(year~Plot) +
   geom_histogram(aes(x=month, fill=Phenophase), position="dodge", binwidth=1) #+
 
-ggplot(data=veg.long) +
-  facet_grid(Phenophase~year) +
-  geom_boxplot(aes(x=yday, y=Plot, fill=Plot))
-
-ggplot(data=veg.long) +
-  facet_grid(Phenophase~.) +
-  geom_boxplot(aes(x=yday, y=Plot, fill=Plot))
-ggplot(data=veg.long) +
-  facet_grid(Phenophase~Plot) +
-  geom_boxplot(aes(x=yday, y=as.factor(year), fill=Plot))
-
-ggplot(data=veg.long) +
-  facet_grid(Phenophase~.) +
-  geom_boxplot(aes(x=yday, y=as.factor(year), fill=Plot))
-
-ggplot(data=veg.long) +
-  facet_grid(Phenophase~.) +
-  geom_boxplot(aes(x=yday, y=Plot, group=as.factor(year)))
-
-
-pheno.subplot <- aggregate(Pheno.Status ~ Phenophase + Plot + Subplot + year + month, data=pheno.spp, FUN=length)
-
-ggplot(data=pheno.subplot) +
-  facet_grid(Phenophase~year) +
-  geom_boxplot(aes(x=month, y=Subplot, fill=Plot))
-
-
-
+# ggplot(data=veg.long) +
+#   facet_grid(Plot~Phenophase) +
+#   geom_boxplot(aes(x=yday, y=as.factor(year), fill=Plot))
+# 
+# ggplot(data=veg.long) +
+#   facet_grid(Phenophase~.) +
+#   geom_boxplot(aes(x=yday, y=Plot, fill=Plot))
+# 
+# ggplot(data=veg.long) +
+#   facet_grid(Phenophase~Plot) +
+#   geom_boxplot(aes(x=yday, y=as.factor(year), fill=Plot))
+# 
+# ggplot(data=veg.long) +
+#   facet_grid(Phenophase~.) +
+#   geom_boxplot(aes(x=yday, y=as.factor(year), fill=Plot))
+# 
+# ggplot(data=veg.long) +
+#   facet_grid(Phenophase~.) +
+#   geom_boxplot(aes(x=yday, y=Plot, group=as.factor(year)))
+# 
+# 
+# pheno.subplot <- aggregate(Pheno.Status ~ Phenophase + Plot + Subplot + year + month, data=pheno.spp, FUN=length)
+# 
+# ggplot(data=pheno.subplot) +
+#   facet_grid(Phenophase~year) +
+#   geom_boxplot(aes(x=month, y=Subplot, fill=Plot))
+# 
+# 
+# 
