@@ -22,9 +22,9 @@ overwrite=T
 keyLeafLitter <- "1d7Py4ehN2PmrmKmyv2hDUkX4fWa95xdlQlGVBN9x20g" 
 
 # Using a formatting theme consistent with what Meghan has done
-theme.meghan <-   theme(panel.grid.major = element_blank(),
+theme_bw() <-   theme(panel.grid.major = element_blank(),
                         panel.grid.minor = element_blank(),
-                        panel.border = element_rect(fill="white", colour = "black", size=.7),
+                        panel.border = element_rect(fill="white", colour = "black", linewidth=0.7),
                         axis.title.x = element_text(margin = margin(t = 10, b=5), size=14),
                         axis.title.y = element_text(margin = margin(l = 5, r=5), size=14),
                         axis.text.x= element_text(margin = margin(t = 10), size=12),
@@ -147,21 +147,81 @@ for(YR in yrsSave){
 ################################################
 datLeafLitter$year <- lubridate::year(datLeafLitter$date_collection)
 datLeafLitter$yday <- lubridate::yday(datLeafLitter$date_collection)
+datLeafLitter$week <- lubridate::week(datLeafLitter$date_collection)
 summary(datLeafLitter)
+
+aggTrapTotal <- aggregate(mass_g ~ year + plot + trap_ID, data=datLeafLitter, FUN=sum)
+aggTrapTotal$plot <- factor(aggTissTrap$plot, levels=plotOrder)
+summary(aggTrapTotal)
+
+
+png(file.path(path.figs, "TotalMass_byPlot_byYear_latest.png"), height=6, width=8, units="in", res=220)
+ggplot(data=aggTrapTotal) +
+  # facet_wrap(~plot) +
+  geom_boxplot(aes(x=as.factor(year), y=mass_g, fill=plot)) +
+  scale_fill_manual(values=ewPlotColors) +
+  theme_bw()
+dev.off()
+  
+
+aggTrapDate <- aggregate(mass_g ~ date_collection + year + yday + plot + trap_ID, data=datLeafLitter, FUN=sum)
+aggTrapDate$plot <- factor(aggTrapDate$plot, levels=plotOrder)
+summary(aggTrapDate)
+
+png(file.path(path.figs, "TotalMass_byTrap_byDate_latest.png"), height=6, width=8, units="in", res=220)
+ggplot(data=aggTrapDate) +
+  facet_grid(year~plot) +
+  geom_point(aes(x=yday, y=mass_g, color=plot, group=trap_ID), stat="identity") +
+  stat_summary(geom="line", aes(x=yday, y=mass_g), fun="mean") +
+  scale_color_manual(values=ewPlotColors) +
+  theme_bw()
+dev.off()
+
+aggTrapWeek <- aggregate(mass_g ~ date_collection + year + week + plot + trap_ID, data=datLeafLitter, FUN=sum)
+aggTrapWeek$plot <- factor(aggTrapWeek$plot, levels=plotOrder)
+summary(aggTrapWeek)
+
+png(file.path(path.figs, "TotalMass_byTrap_byWeek_latest.png"), height=6, width=8, units="in", res=220)
+ggplot(data=aggTrapWeek) +
+  facet_grid(year~plot) +
+  geom_point(aes(x=week, y=mass_g, color=plot, group=trap_ID), stat="identity") +
+  stat_summary(geom="line", aes(x=week, y=mass_g), fun="mean") +
+  scale_color_manual(values=ewPlotColors) +
+  theme_bw()
+dev.off()
+
+
 
 # - Average biomass by tissue by plot by year
 aggTissTrap <- aggregate(mass_g ~ tissue + year + plot + trap_ID, data=datLeafLitter, FUN=sum)
 aggTissTrap$plot <- factor(aggTissTrap$plot, levels=plotOrder)
 summary(aggTissTrap)
 
-ggplot(data=aggTissTrap) +
-  facet_wrap(~tissue) +
+png(file.path(path.figs, "TissueMass_byPlot_byYear_latest.png"), height=6, width=8, units="in", res=220)
+ggplot(data=aggTissTrap[aggTissTrap$tissue!="EMPTY BAG",]) +
+  facet_wrap(~tissue, scales="free_y") +
   geom_boxplot(aes(x=as.factor(year), y=mass_g, fill=plot)) +
-  labs(x="Year", y="Shannon BD (H')") +
+  labs(x="Year", y="mass (g)") +
   scale_fill_manual(values=ewPlotColors) +
   scale_color_manual(values=ewPlotColors) +
-  theme.meghan
+  theme_bw()
+dev.off()
 
-aggTissPlot <-aggregate(mass_g ~ tissue + year + plot + trap_ID, data=datLeafLitter, FUN=mean)
-summary(aggTissPlot)
+
+aggTissTrapWk <-aggregate(mass_g ~ tissue + year + week + plot + trap_ID, data=datLeafLitter, FUN=sum)
+aggTissTrap$plot <- factor(aggTissTrap$plot, levels=plotOrder)
+summary(aggTissTrapWk)
+
+png(file.path(path.figs, "LeafMass_byTrap_byWeek_latest.png"), height=6, width=8, units="in", res=220)
+ggplot(data=aggTissTrapWk[aggTissTrapWk$tissue=="leaf",]) +
+  facet_grid(year~plot) +
+  # facet_wrap(~tissue, scales="free_y") +
+  geom_point(aes(x=week, y=mass_g, color=plot)) +
+  stat_summary(geom="line", aes(x=week, y=mass_g), fun="mean") +
+  labs(x="week", y="mass (g)") +
+  scale_fill_manual(values=ewPlotColors) +
+  scale_color_manual(values=ewPlotColors) +
+  theme_bw()
+dev.off()
+
 ################################################

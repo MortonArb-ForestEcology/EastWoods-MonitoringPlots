@@ -168,8 +168,8 @@ yr.hprime <- ggplot(data=bd.yr) +
 yr.richness <- ggplot(data=bd.yr) +
   geom_boxplot(aes(x=as.factor(year), y=Richness, fill=Plot)) +
   labs(x="Year", y="Species Richness") +
-  scale_fill_brewer(values=ewPlotColors) +
-  scale_color_brewer(values=ewPlotColors) +
+  scale_fill_manual(values=ewPlotColors) +
+  scale_color_manual(values=ewPlotColors) +
   theme_linedraw() + theme.meghan
 
 
