@@ -58,7 +58,7 @@ summary(dat.veg[["2024"]][is.na(dat.veg$`2024`$Species),])
 summary(as.factor(dat.veg[["2024"]]$GenusSpecies))
 
 
-for(YR in names(dat.veg)){
+for(YR in names(dat.veg)[!names(dat.veg)==lubridate::year(Sys.Date())]){
   write.csv(dat.veg[[YR]], file.path(path.save, paste0("MortonArb_EastWoods_Understory_Vegetation_", YR, ".csv")), row.names=F)
 }
 
