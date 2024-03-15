@@ -112,9 +112,9 @@ plotFlower <- ggplot(data=dat.veg[dat.veg$GenusSpecies %in% sppFlowerYday60,]) +
   ggtitle(paste("Open Flowers:", max(dat.veg$Obs.Date))) +
   facet_wrap(~Plot) +
   geom_point(data=dat.veg[dat.veg$GenusSpecies %in% sppFlowerYday60 & dat.veg$year==yrNow & !dat.veg$Flowers.Open,], aes(x=yday, y=GenusSpecies, color="No Open Flowers - This Year"), size=3.5) + 
-  geom_point(data=dat.veg[dat.veg$GenusSpecies %in% sppFlowerYday60 &  !dat.veg$Flowers.Open,], aes(x=yday, y=GenusSpecies, color="No Open Flowers")) +
   geom_point(data=dat.veg[dat.veg$GenusSpecies %in% sppFlowerYday60 & dat.veg$year==yrNow & dat.veg$Flowers.Open,], aes(x=yday, y=GenusSpecies, color="Open Flowers - This Year"), size=3) + 
-  geom_point(data=dat.veg[dat.veg$GenusSpecies %in% sppFlowerYday60 & dat.veg$Flowers.Open,], aes(x=yday, y=GenusSpecies, color="Open Flowers - Past")) +
+  geom_point(data=dat.veg[dat.veg$GenusSpecies %in% sppFlowerYday60 & dat.veg$year<yrNow &  !dat.veg$Flowers.Open,], aes(x=yday, y=GenusSpecies, color="No Open Flowers")) +
+  geom_point(data=dat.veg[dat.veg$GenusSpecies %in% sppFlowerYday60 & dat.veg$year<yrNow & dat.veg$Flowers.Open,], aes(x=yday, y=GenusSpecies, color="Open Flowers - Past")) +
   scale_x_continuous(name="Date", limits=c(ydayNow-30, ydayNow+30), breaks=ydayLabs$yday, labels = paste(ydayLabs$moName, ydayLabs$day)) +
   scale_color_manual(values=c("No Open Flowers"="gray80", "Open Flowers - Past" = "plum2", "No Open Flowers - This Year"="gray50", "Open Flowers - This Year"="purple3")) +
   theme_bw() +
@@ -131,13 +131,13 @@ sppLeafYday60 <- unique(dat.veg$GenusSpecies[dat.veg$yday>=ydayNow-30 & dat.veg$
 plotLeaf <- ggplot(data=dat.veg[dat.veg$GenusSpecies %in% sppLeafYday60,]) +
   ggtitle(paste("Leaves Present:", max(dat.veg$Obs.Date))) +
   facet_wrap(~Plot, scales="free_y") +
-  geom_point(data=dat.veg[dat.veg$GenusSpecies %in% sppFlowerYday60 & dat.veg$year==yrNow & !dat.veg$Leaves.Present,], aes(x=yday, y=GenusSpecies, color="No Leaves - This Year"), size=2.5) +
-  geom_point(data=dat.veg[dat.veg$GenusSpecies %in% sppLeafYday60 &  !dat.veg$Leaves.Present,], aes(x=yday, y=GenusSpecies, color="No Leaves")) +
+  geom_point(data=dat.veg[dat.veg$GenusSpecies %in% sppFlowerYday60 & dat.veg$year==yrNow & !dat.veg$Leaves.Present,], aes(x=yday, y=GenusSpecies, color="No Leaves - This Year"), size=3.5) +
   geom_point(data=dat.veg[dat.veg$GenusSpecies %in% sppLeafYday60 & dat.veg$year==yrNow & dat.veg$Leaves.Present,], aes(x=yday, y=GenusSpecies, color="Leaves - This Year"), size=3) + 
-  geom_point(data=dat.veg[dat.veg$GenusSpecies %in% sppLeafYday60 &  dat.veg$Leaves.Present,], aes(x=yday, y=GenusSpecies, color="Leaves - Past")) +
+  geom_point(data=dat.veg[dat.veg$GenusSpecies %in% sppLeafYday60  & dat.veg$year<yrNow &  !dat.veg$Leaves.Present,], aes(x=yday, y=GenusSpecies, color="No Leaves - Past")) +
+  geom_point(data=dat.veg[dat.veg$GenusSpecies %in% sppLeafYday60  & dat.veg$year<yrNow &  dat.veg$Leaves.Present,], aes(x=yday, y=GenusSpecies, color="Leaves - Past")) +
   scale_x_continuous(name="Date", limits=c(ydayNow-30, ydayNow+30), breaks=ydayLabs$yday, labels = paste(ydayLabs$moName, ydayLabs$day)) +
   theme_bw() +
-  scale_color_manual(values=c("No Leaves"="gray80", "Leaves - Past" = "palegreen3", "No Leaves - This Year"="gray50", "Leaves - This Year"="darkolivegreen")) +
+  scale_color_manual(values=c("No Leaves - Past"="gray80", "Leaves - Past" = "palegreen3", "No Leaves - This Year"="gray50", "Leaves - This Year"="darkolivegreen")) +
   theme(legend.position = "right")
 
 png(file.path(path.figs, "Understory_Leaves_Window-60day_latest.png"), height=12, width=12, units="in", res=320)
