@@ -10,7 +10,7 @@ dir.create(path.figs, recursive = T, showWarnings = F)
 # Using a formatting theme consistent with what Meghan has done
 theme.meghan <-   theme(panel.grid.major = element_blank(),
                         panel.grid.minor = element_blank(),
-                        panel.border = element_rect(fill=NA, colour = "black", size=.7),
+                        panel.border = element_rect(fill=NA, colour = "black", linewidth=.7),
                         axis.title.x = element_text(margin = margin(t = 10, b=5), size=14),
                         axis.title.y = element_text(margin = margin(l = 5, r=5), size=14),
                         axis.text.x= element_text(margin = margin(t = 10), size=12),

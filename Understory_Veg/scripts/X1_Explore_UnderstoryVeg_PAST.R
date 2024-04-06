@@ -10,7 +10,7 @@ dir.create(path.figs, recursive = T, showWarnings = F)
 # Using a formatting theme consistent with what Meghan has done
 theme.meghan <-   theme(panel.grid.major = element_blank(),
                         panel.grid.minor = element_blank(),
-                        panel.border = element_rect(fill=NA, colour = "black", size=.7),
+                        panel.border = element_rect(fill=NA, colour = "black", linewidth=.7),
                         axis.title.x = element_text(margin = margin(t = 10, b=5), size=14),
                         axis.title.y = element_text(margin = margin(l = 5, r=5), size=14),
                         axis.text.x= element_text(margin = margin(t = 10), size=12),
@@ -26,55 +26,10 @@ ewPlotColors
 
 # Load the understory data
 # # NOTE: I haven't done any species harmonization, so lets not do community comparisions yet
-yrs.ew <- 2019:2024
-dat.veg <- list()
-for(YR in yrs.ew){
-  dat.yr <- get.understory(YEAR=YR)
-  dat.yr <- dat.yr[dat.yr$Name.Common!="NOTHING" & dat.yr$Cover>0 & !is.na(dat.yr$Phenophase.Codes),]
-  # dat.yr$GenusSpecies <- paste(dat.yr$Genus, dat.yr$Species)
-  
-  dat.veg[[paste(YR)]] <- dat.yr
-}
-
-# summary(dat.veg[["2019"]])
-# summary(dat.veg[["2020"]])
-# summary(dat.veg[["2021"]])
-# summary(dat.veg[["2022"]])
-# summary(dat.veg[["2023"]])
-summary(dat.veg[["2024"]])
-
-# summary(dat.veg[["2019"]][is.na(dat.veg$`2019`$Species),])
-# summary(dat.veg[["2020"]][is.na(dat.veg$`2020`$Species),])
-# summary(dat.veg[["2021"]][is.na(dat.veg$`2021`$Species),])
-# summary(dat.veg[["2022"]][is.na(dat.veg$`2022`$Species),])
-# summary(dat.veg[["2023"]][is.na(dat.veg$`2023`$Species),])
-summary(dat.veg[["2024"]][is.na(dat.veg$`2024`$Species),])
-
-# summary(as.factor(dat.veg[["2019"]]$GenusSpecies))
-# summary(as.factor(dat.veg[["2020"]]$GenusSpecies))
-# summary(as.factor(dat.veg[["2021"]]$GenusSpecies))
-# summary(as.factor(dat.veg[["2022"]]$GenusSpecies))
-# summary(as.factor(dat.veg[["2023"]]$GenusSpecies))
-summary(as.factor(dat.veg[["2024"]]$GenusSpecies))
-
-
-for(YR in names(dat.veg)[!names(dat.veg)==lubridate::year(Sys.Date())]){
-  write.csv(dat.veg[[YR]], file.path(path.save, paste0("MortonArb_EastWoods_Understory_Vegetation_", YR, ".csv")), row.names=F)
-}
-
-
-# test <- read.csv("MortonArb_EastWoods_Understory_Vegetation_2019.csv")
-# head(test)
-
-
-########################
-# Needs to be updated!
-########################
-files.past <- dir(path.save)
-
+fpast <- dir(path.save)
 dat.veg <- data.frame()
-for(i in seq_along(files.past)){
-  datNow <- read.csv(file.path(path.save, files.past[i]))
+for(i in seq_along(fpast)){
+  datNow <- read.csv(file.path(path.save, fpast[i]))
   
   dat.veg <- rbind(dat.veg, datNow)
 }
@@ -90,6 +45,18 @@ dat.veg$Genus <- as.factor(dat.veg$Genus)
 dat.veg$Species <- as.factor(dat.veg$Species)
 dat.veg$GenusSpecies <-as.factor( paste(dat.veg$Genus, dat.veg$Species))
 summary(dat.veg)
+
+
+
+
+# for(YR in names(dat.veg)[!names(dat.veg)==lubridate::year(Sys.Date())]){
+#   write.csv(dat.veg[[YR]], file.path(path.save, paste0("MortonArb_EastWoods_Understory_Vegetation_", YR, ".csv")), row.names=F)
+# }
+
+
+# test <- read.csv("MortonArb_EastWoods_Understory_Vegetation_2019.csv")
+# head(test)
+
 
 sort(unique(dat.veg$GenusSpecies[!grepl("UNKNOWN", dat.veg$GenusSpecies)]))
 
@@ -133,6 +100,33 @@ plot.richness <- ggplot(data=veg.summary[veg.graph,], aes(x=Obs.Date, y=Richness
 
 png(file.path(path.figs, "UnderstoryVegetation_Cover_Richness.png"), height=6, width=8, units="in", res=220)
 cowplot::plot_grid(plot.cover, plot.richness, ncol=1)
+dev.off()
+
+
+plot.coverDOY <- ggplot(data=veg.summary[veg.graph,], aes(x=yday, y=Cover, group=as.factor(year))) +
+  facet_grid(.~Plot) +
+  geom_ribbon(aes(fill="Past"), stat="summary", fun.ymin=min, fun.ymax=max, alpha=0.5) +
+  geom_line(aes(color="Past"), stat="summary", fun.y=mean) +
+  geom_ribbon(data=veg.summary[veg.summary$year==max(veg.summary$year),], aes(fill="This Year"), stat="summary", fun.ymin=min, fun.ymax=max, alpha=0.5) +
+  geom_line(data=veg.summary[veg.summary$year==max(veg.summary$year),], aes(color="This Year"), stat="summary", fun.y=mean, linewidth=1.5) +
+  labs(x="Observation Date", y="Total Veg Cover") +
+  scale_fill_manual(values=c("Past"="gray50", "This Year"="forestgreen")) +
+  scale_color_manual(values=c("Past"="gray50", "This Year"="forestgreen")) +
+  theme_linedraw() + theme.meghan + theme(legend.position="right")
+
+plot.richnessDOY <- ggplot(data=veg.summary[veg.graph,], aes(x=yday, y=Richness, group=as.factor(year))) +
+  facet_grid(.~Plot) +
+  geom_ribbon(aes(fill="Past"), stat="summary", fun.ymin=min, fun.ymax=max, alpha=0.5) +
+  geom_line(aes(color="Past"), stat="summary", fun.y=mean) +
+  geom_ribbon(data=veg.summary[veg.summary$year==max(veg.summary$year),], aes(fill="This Year"), stat="summary", fun.ymin=min, fun.ymax=max, alpha=0.5) +
+  geom_line(data=veg.summary[veg.summary$year==max(veg.summary$year),], aes(color="This Year"), stat="summary", fun.y=mean, linewidth=1.5) +
+  labs(x="Observation Date", y="Total Veg Cover") +
+  scale_fill_manual(values=c("Past"="gray50", "This Year"="forestgreen")) +
+  scale_color_manual(values=c("Past"="gray50", "This Year"="forestgreen")) +
+  theme_linedraw() + theme.meghan + theme(legend.position="right")
+
+png(file.path(path.figs, "UnderstoryVegetation_Cover_Richness_DOY.png"), height=6, width=8, units="in", res=220)
+cowplot::plot_grid(plot.coverDOY, plot.richnessDOY, ncol=1)
 dev.off()
 
 ####################################
