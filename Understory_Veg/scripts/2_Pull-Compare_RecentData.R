@@ -10,7 +10,7 @@ dir.create(path.figs, recursive = T, showWarnings = F)
 # Using a formatting theme consistent with what Meghan has done
 theme.meghan <-   theme(panel.grid.major = element_blank(),
                         panel.grid.minor = element_blank(),
-                        panel.border = element_rect(fill=NA, colour = "black", size=.7),
+                        panel.border = element_rect(fill=NA, colour = "black", linewidth=.7),
                         axis.title.x = element_text(margin = margin(t = 10, b=5), size=14),
                         axis.title.y = element_text(margin = margin(l = 5, r=5), size=14),
                         axis.text.x= element_text(margin = margin(t = 10), size=12),
@@ -63,6 +63,7 @@ length(unique(dat.veg$GenusSpecies[!grepl("UNKNOWN", dat.veg$GenusSpecies)]))
 # Get, save, merge current data ----
 # # # # # # # # # # # # # # # # # # # # # 
 # Load the understory data for this year
+googlesheets4::gs4_auth(email="crollinson@mortonarb.org")
 datNow <- get.understory(YEAR=lubridate::year(Sys.Date()))
 datNow <- datNow[datNow$Name.Common!="NOTHING" & datNow$Cover>0 & !is.na(datNow$Phenophase.Codes),]
 summary(datNow)
@@ -120,7 +121,7 @@ plotFlower <- ggplot(data=dat.veg[dat.veg$GenusSpecies %in% sppFlowerYday60,]) +
   theme_bw() +
   theme(legend.position = "right")
 
-png(file.path(path.figs, "Understory_Flowering_Window-60day_latest.png"), height=6, width=10, units="in", res=240)
+png(file.path(path.figs, "Understory_Flowering_Window-60day_latest.png"), height=10, width=8, units="in", res=240)
 plotFlower
 dev.off()
 
@@ -128,13 +129,13 @@ dev.off()
 sppLeafYday60 <- unique(dat.veg$GenusSpecies[dat.veg$yday>=ydayNow-30 & dat.veg$yday<=ydayNow+30 & dat.veg$Leaves.Present])
 
 
-plotLeaf <- ggplot(data=dat.veg[dat.veg$GenusSpecies %in% sppLeafYday60,]) +
+plotLeaf <- ggplot(data=dat.veg[dat.veg$GenusSpecies %in% sppLeafYday60 & !grepl("UNKNOWN", dat.veg$Genus),]) +
   ggtitle(paste("Leaves Present:", max(dat.veg$Obs.Date))) +
   facet_wrap(~Plot, scales="free_y") +
-  geom_point(data=dat.veg[dat.veg$GenusSpecies %in% sppFlowerYday60 & dat.veg$year==yrNow & !dat.veg$Leaves.Present,], aes(x=yday, y=GenusSpecies, color="No Leaves - This Year"), size=3.5) +
-  geom_point(data=dat.veg[dat.veg$GenusSpecies %in% sppLeafYday60 & dat.veg$year==yrNow & dat.veg$Leaves.Present,], aes(x=yday, y=GenusSpecies, color="Leaves - This Year"), size=3) + 
-  geom_point(data=dat.veg[dat.veg$GenusSpecies %in% sppLeafYday60  & dat.veg$year<yrNow &  !dat.veg$Leaves.Present,], aes(x=yday, y=GenusSpecies, color="No Leaves - Past")) +
-  geom_point(data=dat.veg[dat.veg$GenusSpecies %in% sppLeafYday60  & dat.veg$year<yrNow &  dat.veg$Leaves.Present,], aes(x=yday, y=GenusSpecies, color="Leaves - Past")) +
+  geom_point(data=dat.veg[!grepl("UNKNOWN", dat.veg$Genus) & dat.veg$GenusSpecies %in% sppFlowerYday60 & dat.veg$year==yrNow & !dat.veg$Leaves.Present,], aes(x=yday, y=GenusSpecies, color="No Leaves - This Year"), size=3.5) +
+  geom_point(data=dat.veg[!grepl("UNKNOWN", dat.veg$Genus) & dat.veg$GenusSpecies %in% sppLeafYday60 & dat.veg$year==yrNow & dat.veg$Leaves.Present,], aes(x=yday, y=GenusSpecies, color="Leaves - This Year"), size=3) + 
+  geom_point(data=dat.veg[!grepl("UNKNOWN", dat.veg$Genus) & dat.veg$GenusSpecies %in% sppLeafYday60  & dat.veg$year<yrNow &  !dat.veg$Leaves.Present,], aes(x=yday, y=GenusSpecies, color="No Leaves - Past")) +
+  geom_point(data=dat.veg[!grepl("UNKNOWN", dat.veg$Genus) & dat.veg$GenusSpecies %in% sppLeafYday60  & dat.veg$year<yrNow &  dat.veg$Leaves.Present,], aes(x=yday, y=GenusSpecies, color="Leaves - Past")) +
   scale_x_continuous(name="Date", limits=c(ydayNow-30, ydayNow+30), breaks=ydayLabs$yday, labels = paste(ydayLabs$moName, ydayLabs$day)) +
   theme_bw() +
   scale_color_manual(values=c("No Leaves - Past"="gray80", "Leaves - Past" = "palegreen3", "No Leaves - This Year"="gray50", "Leaves - This Year"="darkolivegreen")) +
