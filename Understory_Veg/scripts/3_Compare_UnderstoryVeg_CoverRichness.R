@@ -120,7 +120,7 @@ plot.richnessDOY <- ggplot(data=veg.summary[veg.graph,], aes(x=yday, y=Richness,
   geom_line(aes(color="Past"), stat="summary", fun.y=mean) +
   geom_ribbon(data=veg.summary[veg.summary$year==max(veg.summary$year),], aes(fill="This Year"), stat="summary", fun.ymin=min, fun.ymax=max, alpha=0.5) +
   geom_line(data=veg.summary[veg.summary$year==max(veg.summary$year),], aes(color="This Year"), stat="summary", fun.y=mean, linewidth=1.5) +
-  labs(x="Observation Date", y="Total Veg Cover") +
+  labs(x="Observation Date", y="Total Richness") +
   scale_fill_manual(values=c("Past"="gray50", "This Year"="forestgreen")) +
   scale_color_manual(values=c("Past"="gray50", "This Year"="forestgreen")) +
   theme_linedraw() + theme.meghan + theme(legend.position="right")
@@ -202,32 +202,3 @@ ggplot(data=pheno.spp.plot.mo[,]) +
   facet_grid(year~Plot) +
   geom_histogram(aes(x=month, fill=Phenophase), position="dodge", binwidth=1) #+
 
-# ggplot(data=veg.long) +
-#   facet_grid(Plot~Phenophase) +
-#   geom_boxplot(aes(x=yday, y=as.factor(year), fill=Plot))
-# 
-# ggplot(data=veg.long) +
-#   facet_grid(Phenophase~.) +
-#   geom_boxplot(aes(x=yday, y=Plot, fill=Plot))
-# 
-# ggplot(data=veg.long) +
-#   facet_grid(Phenophase~Plot) +
-#   geom_boxplot(aes(x=yday, y=as.factor(year), fill=Plot))
-# 
-# ggplot(data=veg.long) +
-#   facet_grid(Phenophase~.) +
-#   geom_boxplot(aes(x=yday, y=as.factor(year), fill=Plot))
-# 
-# ggplot(data=veg.long) +
-#   facet_grid(Phenophase~.) +
-#   geom_boxplot(aes(x=yday, y=Plot, group=as.factor(year)))
-# 
-# 
-# pheno.subplot <- aggregate(Pheno.Status ~ Phenophase + Plot + Subplot + year + month, data=pheno.spp, FUN=length)
-# 
-# ggplot(data=pheno.subplot) +
-#   facet_grid(Phenophase~year) +
-#   geom_boxplot(aes(x=month, y=Subplot, fill=Plot))
-# 
-# 
-# 
