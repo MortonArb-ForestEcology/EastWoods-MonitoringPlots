@@ -68,6 +68,8 @@ datNow <- get.understory(YEAR=lubridate::year(Sys.Date()))
 datNow <- datNow[datNow$Name.Common!="NOTHING" & datNow$Cover>0 & !is.na(datNow$Phenophase.Codes),]
 summary(datNow)
 
+datNow[is.na(datNow$Genus),]
+
 # Save an "Up to" file with the archive
 #  # Code currently pirated from the met station format
 fileSave <- paste0("MortonArb_EastWoods_Understory_Vegetation_", max(lubridate::year(datNow$Obs.Date)), "_up_to_" , max(datNow$Obs.Date), ".csv")

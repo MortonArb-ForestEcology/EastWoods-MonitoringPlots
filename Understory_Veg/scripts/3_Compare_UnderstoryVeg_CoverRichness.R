@@ -120,7 +120,7 @@ plot.richnessDOY <- ggplot(data=veg.summary[veg.graph,], aes(x=yday, y=Richness,
   geom_line(aes(color="Past"), stat="summary", fun.y=mean) +
   geom_ribbon(data=veg.summary[veg.summary$year==max(veg.summary$year),], aes(fill="This Year"), stat="summary", fun.ymin=min, fun.ymax=max, alpha=0.5) +
   geom_line(data=veg.summary[veg.summary$year==max(veg.summary$year),], aes(color="This Year"), stat="summary", fun.y=mean, linewidth=1.5) +
-  labs(x="Observation Date", y="Total Richness") +
+  labs(x="Observation Date", y="Species Richness") +
   scale_fill_manual(values=c("Past"="gray50", "This Year"="forestgreen")) +
   scale_color_manual(values=c("Past"="gray50", "This Year"="forestgreen")) +
   theme_linedraw() + theme.meghan + theme(legend.position="right")
