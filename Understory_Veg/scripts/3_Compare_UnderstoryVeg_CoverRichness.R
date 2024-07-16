@@ -202,32 +202,3 @@ ggplot(data=pheno.spp.plot.mo[,]) +
   facet_grid(year~Plot) +
   geom_histogram(aes(x=month, fill=Phenophase), position="dodge", binwidth=1) #+
 
-# ggplot(data=veg.long) +
-#   facet_grid(Plot~Phenophase) +
-#   geom_boxplot(aes(x=yday, y=as.factor(year), fill=Plot))
-# 
-# ggplot(data=veg.long) +
-#   facet_grid(Phenophase~.) +
-#   geom_boxplot(aes(x=yday, y=Plot, fill=Plot))
-# 
-# ggplot(data=veg.long) +
-#   facet_grid(Phenophase~Plot) +
-#   geom_boxplot(aes(x=yday, y=as.factor(year), fill=Plot))
-# 
-# ggplot(data=veg.long) +
-#   facet_grid(Phenophase~.) +
-#   geom_boxplot(aes(x=yday, y=as.factor(year), fill=Plot))
-# 
-# ggplot(data=veg.long) +
-#   facet_grid(Phenophase~.) +
-#   geom_boxplot(aes(x=yday, y=Plot, group=as.factor(year)))
-# 
-# 
-# pheno.subplot <- aggregate(Pheno.Status ~ Phenophase + Plot + Subplot + year + month, data=pheno.spp, FUN=length)
-# 
-# ggplot(data=pheno.subplot) +
-#   facet_grid(Phenophase~year) +
-#   geom_boxplot(aes(x=month, y=Subplot, fill=Plot))
-# 
-# 
-# 
