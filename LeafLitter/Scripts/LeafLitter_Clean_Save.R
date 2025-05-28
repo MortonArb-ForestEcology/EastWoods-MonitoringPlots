@@ -17,12 +17,13 @@ if(!dir.exists(path.save)) dir.create(path.save, recursive=T)
 
 # Should we overwrite old data or not?
 overwrite=T
+yrsCheck = 2018:2025
 
 # The Google Drive key ID for the leaf litter spreadsheet; 
 keyLeafLitter <- "1d7Py4ehN2PmrmKmyv2hDUkX4fWa95xdlQlGVBN9x20g" 
 
 # Using a formatting theme consistent with what Meghan has done
-theme_bw() <-   theme(panel.grid.major = element_blank(),
+theme_base <-   theme(panel.grid.major = element_blank(),
                         panel.grid.minor = element_blank(),
                         panel.border = element_rect(fill="white", colour = "black", linewidth=0.7),
                         axis.title.x = element_text(margin = margin(t = 10, b=5), size=14),
@@ -45,82 +46,66 @@ ewPlotColors
 # Read in and save the data ----
 ################################################
 # Read in and look at the data
-datLeafLitter <- googlesheets4::read_sheet(ss=keyLeafLitter, sheet="raw_data")
-summary(datLeafLitter)
-
-### ---------------------------
-# # #  Uncommment this code if columns are reading in as a list to track down issues
-### ---------------------------
-# # Columns to figure out: Num_fruit.Length
-# # num_fruit nuM_mature_fruit
-# test <- datLeafLitter$num_mature_fruit
-# head(test)
-# 
-# testType <- unlist(lapply(test, FUN=function(x){class(x)}))
-# summary(as.factor(testType))
-# which(testType=="character")
-### ---------------------------
-
-# Conver to a data frame because tibbles drive Christy crazy
-datLeafLitter <- data.frame(datLeafLitter)
-
-# Converting columns to factors to make checks easier
-colFact <- c("sorter", "plot", "trap_ID", "genus", "species", "oak_group", "tissue", "weigher", "data_entry")
-for(COL in colFact){
-  datLeafLitter[,COL] <- as.factor(datLeafLitter[,COL])
-}
-datLeafLitter$plot <- factor(datLeafLitter$plot, levels=plotOrder)
-
-summary(datLeafLitter)
-
-# dropping unused columns
-colDrop <- c("oak_group", "taxon", "mass_per_cm")
-datLeafLitter <- datLeafLitter[,!names(datLeafLitter) %in% colDrop]
-summary(datLeafLitter)
-
-# Subset to only things that have actually been weighed
-# Paul & Roxanne pre-populate their spreadsheet, which drives me crazy, but we'll have that fight a bit later
-# datLeafLitter <- datLeafLitter[!is.na(datLeafLitter$date_weighed) & as.Date(datLeafLitter$date_weighed)<Sys.Date(),]
-datLeafLitter <- datLeafLitter[!is.na(datLeafLitter$date_weighed) & datLeafLitter$date_weighed<=Sys.Date(),]
-summary(datLeafLitter)
-
-
-summary(datLeafLitter$genus)
-summary(datLeafLitter$species)
-summary(datLeafLitter$tissue)
-
-
-
-# Cleaning up dat based on tissue characterization:
-# # If tissue == "EMPTY BAG" this is a true 0 and mass is 0
-# # if tissue is or something like "FELL OVER", "No Bag" then it's missing data and is NOT a 0
-datLeafLitter$mass_g[datLeafLitter$tissue=="EMPTY BAG"] <- 0
-summary(datLeafLitter)
-
-# Saving Data before the current year for archiving.
-yrsAll <- unique(lubridate::year(datLeafLitter$date_collection))
-yrMax <- max(yrsAll)
-yrsSave <- yrsAll[yrsAll<yrMax]
-
-# For the current year, write the most recent date that's been processed
-# check for existing files
-fYrMax <- dir(path.save, as.character(yrMax))
-
-datNow <- datLeafLitter[lubridate::year(datLeafLitter$date_collection)==yrMax,]
-# summary(datNow)
-if(nrow(datNow)>0){
-  dateEnd <- max(as.Date(datLeafLitter$date_collection))
-  fName <- paste0("MortonArb_EastWoods_LeafLitter_", yrMax, "_upto_", dateEnd, ".csv")
+for(YR in yrsCheck){
+  print(YR)
+  datLeafLitter <- googlesheets4::read_sheet(ss=keyLeafLitter, sheet=paste("raw data", YR))
+  summary(datLeafLitter)
   
-  write.csv(datNow, file.path(path.save, fName), row.names=F)
+  if(nrow(datLeafLitter)==0) next
   
-  if(length(fYrMax[fYrMax!=fName])>0) rm(fYrMax)
-} 
-
-
-
-# Save Past Years
-for(YR in yrsSave){
+  ### ---------------------------
+  # # #  Uncommment this code if columns are reading in as a list to track down issues
+  ### ---------------------------
+  # # Columns to figure out: Num_fruit.Length
+  # # num_fruit nuM_mature_fruit
+  # test <- datLeafLitter$num_mature_fruit
+  # head(test)
+  # 
+  # testType <- unlist(lapply(test, FUN=function(x){class(x)}))
+  # summary(as.factor(testType))
+  # which(testType=="character")
+  ### ---------------------------
+  
+  # Conver to a data frame because tibbles drive Christy crazy
+  datLeafLitter <- data.frame(datLeafLitter)
+  datLeafLitter$date_collection <- as.Date(datLeafLitter$date_collection)
+  datLeafLitter$date_weighed <- as.Date(datLeafLitter$date_weighed)
+  
+  # Converting columns to factors to make checks easier
+  colFact <- c("sorter", "plot", "trap_ID", "genus", "species", "oak_group", "tissue", "weigher", "data_entry")
+  for(COL in colFact){
+    datLeafLitter[,COL] <- as.factor(datLeafLitter[,COL])
+  }
+  datLeafLitter$plot <- factor(datLeafLitter$plot, levels=plotOrder)
+  
+  summary(datLeafLitter)
+  
+  # dropping unused columns
+  colDrop <- c("oak_group", "taxon", "mass_per_cm")
+  datLeafLitter <- datLeafLitter[,!names(datLeafLitter) %in% colDrop]
+  summary(datLeafLitter)
+  
+  # Subset to only things that have actually been weighed
+  # Paul & Roxanne pre-populate their spreadsheet, which drives me crazy, but we'll have that fight a bit later
+  # datLeafLitter <- datLeafLitter[!is.na(datLeafLitter$date_weighed) & as.Date(datLeafLitter$date_weighed)<Sys.Date(),]
+  datLeafLitter <- datLeafLitter[!is.na(datLeafLitter$date_weighed) & datLeafLitter$date_weighed<=Sys.Date(),]
+  summary(datLeafLitter)
+  
+  
+  summary(datLeafLitter$genus)
+  summary(datLeafLitter$species)
+  summary(datLeafLitter$tissue)
+  
+  
+  
+  # Cleaning up dat based on tissue characterization:
+  # # If tissue == "EMPTY BAG" this is a true 0 and mass is 0
+  # # if tissue is or something like "FELL OVER", "No Bag" then it's missing data and is NOT a 0
+  datLeafLitter$mass_g[datLeafLitter$tissue=="EMPTY BAG"] <- 0
+  summary(datLeafLitter)
+  
+  
+  # Save Past Years
   # YR=yrsSave[1]
   fName <- paste0("MortonArb_EastWoods_LeafLitter_", YR, ".csv")
   if(!overwrite & file.exists(file.path(path.save, fName))) next
@@ -134,94 +119,3 @@ for(YR in yrsSave){
 
 
 
-################################################
-# Now doing some plotting of the data ----
-# Things we want to look at:
-# - Average biomass by tissue by plot by year
-# - Average biomass of leaves, fruit by species through time each year
-# - Total number of fruits, ripe fruits by species per year
-#
-# NOTE: Need to account for absent data at all stages
-# NOTE: because we care about the plot, we'll want to aggregate across traps first to get the mean per plot
-# NOTE: For species, we'll need to do the above, but also account for absent data <-- this will require some thought
-################################################
-datLeafLitter$year <- lubridate::year(datLeafLitter$date_collection)
-datLeafLitter$yday <- lubridate::yday(datLeafLitter$date_collection)
-datLeafLitter$week <- lubridate::week(datLeafLitter$date_collection)
-summary(datLeafLitter)
-
-aggTrapTotal <- aggregate(mass_g ~ year + plot + trap_ID, data=datLeafLitter, FUN=sum)
-aggTrapTotal$plot <- factor(aggTissTrap$plot, levels=plotOrder)
-summary(aggTrapTotal)
-
-
-png(file.path(path.figs, "TotalMass_byPlot_byYear_latest.png"), height=6, width=8, units="in", res=220)
-ggplot(data=aggTrapTotal) +
-  # facet_wrap(~plot) +
-  geom_boxplot(aes(x=as.factor(year), y=mass_g, fill=plot)) +
-  scale_fill_manual(values=ewPlotColors) +
-  theme_bw()
-dev.off()
-  
-
-aggTrapDate <- aggregate(mass_g ~ date_collection + year + yday + plot + trap_ID, data=datLeafLitter, FUN=sum)
-aggTrapDate$plot <- factor(aggTrapDate$plot, levels=plotOrder)
-summary(aggTrapDate)
-
-png(file.path(path.figs, "TotalMass_byTrap_byDate_latest.png"), height=6, width=8, units="in", res=220)
-ggplot(data=aggTrapDate) +
-  facet_grid(year~plot) +
-  geom_point(aes(x=yday, y=mass_g, color=plot, group=trap_ID), stat="identity") +
-  stat_summary(geom="line", aes(x=yday, y=mass_g), fun="mean") +
-  scale_color_manual(values=ewPlotColors) +
-  theme_bw()
-dev.off()
-
-aggTrapWeek <- aggregate(mass_g ~ date_collection + year + week + plot + trap_ID, data=datLeafLitter, FUN=sum)
-aggTrapWeek$plot <- factor(aggTrapWeek$plot, levels=plotOrder)
-summary(aggTrapWeek)
-
-png(file.path(path.figs, "TotalMass_byTrap_byWeek_latest.png"), height=6, width=8, units="in", res=220)
-ggplot(data=aggTrapWeek) +
-  facet_grid(year~plot) +
-  geom_point(aes(x=week, y=mass_g, color=plot, group=trap_ID), stat="identity") +
-  stat_summary(geom="line", aes(x=week, y=mass_g), fun="mean") +
-  scale_color_manual(values=ewPlotColors) +
-  theme_bw()
-dev.off()
-
-
-
-# - Average biomass by tissue by plot by year
-aggTissTrap <- aggregate(mass_g ~ tissue + year + plot + trap_ID, data=datLeafLitter, FUN=sum)
-aggTissTrap$plot <- factor(aggTissTrap$plot, levels=plotOrder)
-summary(aggTissTrap)
-
-png(file.path(path.figs, "TissueMass_byPlot_byYear_latest.png"), height=6, width=8, units="in", res=220)
-ggplot(data=aggTissTrap[aggTissTrap$tissue!="EMPTY BAG",]) +
-  facet_wrap(~tissue, scales="free_y") +
-  geom_boxplot(aes(x=as.factor(year), y=mass_g, fill=plot)) +
-  labs(x="Year", y="mass (g)") +
-  scale_fill_manual(values=ewPlotColors) +
-  scale_color_manual(values=ewPlotColors) +
-  theme_bw()
-dev.off()
-
-
-aggTissTrapWk <-aggregate(mass_g ~ tissue + year + week + plot + trap_ID, data=datLeafLitter, FUN=sum)
-aggTissTrap$plot <- factor(aggTissTrap$plot, levels=plotOrder)
-summary(aggTissTrapWk)
-
-png(file.path(path.figs, "LeafMass_byTrap_byWeek_latest.png"), height=6, width=8, units="in", res=220)
-ggplot(data=aggTissTrapWk[aggTissTrapWk$tissue=="leaf",]) +
-  facet_grid(year~plot) +
-  # facet_wrap(~tissue, scales="free_y") +
-  geom_point(aes(x=week, y=mass_g, color=plot)) +
-  stat_summary(geom="line", aes(x=week, y=mass_g), fun="mean") +
-  labs(x="week", y="mass (g)") +
-  scale_fill_manual(values=ewPlotColors) +
-  scale_color_manual(values=ewPlotColors) +
-  theme_bw()
-dev.off()
-
-################################################
