@@ -5,6 +5,9 @@
 # 2. 
 
 library(ggplot2)
+library(googlesheets4)
+library(tidyverse)
+library(readr)
 
 # Set up file paths etc. --> this should also indicate where you can find these files!
 path.google <- "~/Google Drive/My Drive"
@@ -85,6 +88,7 @@ for(YR in yrsCheck){
   datLeafLitter <- datLeafLitter[,!names(datLeafLitter) %in% colDrop]
   summary(datLeafLitter)
   
+  
   # Subset to only things that have actually been weighed
   # Paul & Roxanne pre-populate their spreadsheet, which drives me crazy, but we'll have that fight a bit later
   # datLeafLitter <- datLeafLitter[!is.na(datLeafLitter$date_weighed) & as.Date(datLeafLitter$date_weighed)<Sys.Date(),]
@@ -117,5 +121,11 @@ for(YR in yrsCheck){
 }
 ################################################
 
+#combine into one dataset
+all_cleaned_files <- list.files(path.save, pattern = "\\.csv$", full.names = TRUE)
+if (length(all_cleaned_files) == 0) { stop(...) }
+datLeafLitter <- map_df(all_cleaned_files, read_csv)
+datLeafLitter$plot <- factor(datLeafLitter$plot, levels = plotOrder)
+summary(datLeafLitter)
 
 

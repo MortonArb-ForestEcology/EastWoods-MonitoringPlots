@@ -20,6 +20,7 @@ path.save <- file.path(path.litter, "LeafLitterData_Clean_forArchiving") # Where
 
 dir(path.save)
 
+##figure out what I need to do for this because we haven't defined or pulled a datLeaflitter yet
 datLeafLitter$year <- lubridate::year(datLeafLitter$date_collection)
 datLeafLitter$yday <- lubridate::yday(datLeafLitter$date_collection)
 datLeafLitter$week <- lubridate::week(datLeafLitter$date_collection)
