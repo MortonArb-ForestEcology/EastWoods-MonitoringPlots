@@ -10,6 +10,7 @@
 # NOTE: For species, we'll need to do the above, but also account for absent data <-- this will require some thought
 ################################################
 library(ggplot2)
+library(tidyverse)
 
 # Set up file paths etc. --> this should also indicate where you can find these files!
 path.google <- "~/Google Drive/My Drive"
@@ -18,7 +19,36 @@ path.figs <- file.path(path.litter, "figures") # where we shoudl save some figur
 path.save <- file.path(path.litter, "LeafLitterData_Clean_forArchiving") # Where we shoudl save the data
 
 
+# Using a formatting theme consistent with what Meghan has done
+theme_base <-   theme(panel.grid.major = element_blank(),
+                      panel.grid.minor = element_blank(),
+                      panel.border = element_rect(fill="white", colour = "black", linewidth=0.7),
+                      axis.title.x = element_text(margin = margin(t = 10, b=5), size=14),
+                      axis.title.y = element_text(margin = margin(l = 5, r=5), size=14),
+                      axis.text.x= element_text(margin = margin(t = 10), size=12),
+                      axis.text.y=element_text(margin = margin(r = 10), size=12),
+                      axis.ticks.length=unit(-0.3, "cm"),
+                      # axis.ticks.margin=unit(0.5, "cm"),
+                      axis.ticks = element_line(colour = "black", linewidth = 0.4))
+
+
+# Setting a consistent color scheme across all graphs
+plotOrder <- c("B-127", "U-134", "N-115", "HH-115")
+ewPlotColors <- c("#1B9E77","#D95F02", "#7570B3", "#E7298A")
+names(ewPlotColors) = plotOrder
+ewPlotColors
+
+
 dir(path.save)
+#combine into one dataset
+all_cleaned_files <- list.files(path.save, pattern = "\\.csv$", full.names = TRUE)
+if (length(all_cleaned_files) == 0) { stop(...) }
+datLeafLitter <- map_df(all_cleaned_files, read_csv)
+datLeafLitter$plot <- factor(datLeafLitter$plot, levels = plotOrder)
+summary(datLeafLitter)
+
+
+
 
 ##figure out what I need to do for this because we haven't defined or pulled a datLeaflitter yet
 datLeafLitter$year <- lubridate::year(datLeafLitter$date_collection)
@@ -27,7 +57,7 @@ datLeafLitter$week <- lubridate::week(datLeafLitter$date_collection)
 summary(datLeafLitter)
 
 aggTrapTotal <- aggregate(mass_g ~ year + plot + trap_ID, data=datLeafLitter, FUN=sum)
-aggTrapTotal$plot <- factor(aggTissTrap$plot, levels=plotOrder)
+aggTrapTotal$plot <- factor(aggTrapTotal$plot, levels=plotOrder)
 summary(aggTrapTotal)
 
 

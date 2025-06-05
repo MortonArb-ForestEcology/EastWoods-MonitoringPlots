@@ -121,11 +121,4 @@ for(YR in yrsCheck){
 }
 ################################################
 
-#combine into one dataset
-all_cleaned_files <- list.files(path.save, pattern = "\\.csv$", full.names = TRUE)
-if (length(all_cleaned_files) == 0) { stop(...) }
-datLeafLitter <- map_df(all_cleaned_files, read_csv)
-datLeafLitter$plot <- factor(datLeafLitter$plot, levels = plotOrder)
-summary(datLeafLitter)
-
 
