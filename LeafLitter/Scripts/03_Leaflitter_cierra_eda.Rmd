@@ -1,0 +1,220 @@
+---
+title: "03_Leaflitter_cierra_eda"
+author: "Cierra Lizer"
+date: "2025-06-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+```
+
+**Note: I noticed I've been graphing some by week and some by day of year, I will need to choose for continuity sake**
+
+
+Set up file paths etc. --> this should also indicate where you can find these files!
+```{r}
+path.google <- "~/Google Drive/My Drive"
+path.litter <- file.path(path.google, "East Woods/Rollinson_Monitoring/Data/Leaf_litter_data")
+path.figs <- file.path(path.litter, "figures") # where we shoudl save some figures
+path.save <- file.path(path.litter, "LeafLitterData_Clean_forArchiving") # Where we shoudl save the data
+```
+
+Using a formatting theme consistent with what Meghan has done
+```{r}
+theme_base <-   theme(panel.grid.major = element_blank(),
+                      panel.grid.minor = element_blank(),
+                      panel.border = element_rect(fill="white", colour = "black", linewidth=0.7),
+                      axis.title.x = element_text(margin = margin(t = 10, b=5), size=14),
+                      axis.title.y = element_text(margin = margin(l = 5, r=5), size=14),
+                      axis.text.x= element_text(margin = margin(t = 10), size=12),
+                      axis.text.y=element_text(margin = margin(r = 10), size=12),
+                      axis.ticks.length=unit(-0.3, "cm"),
+                      # axis.ticks.margin=unit(0.5, "cm"),
+                      axis.ticks = element_line(colour = "black", linewidth = 0.4))
+
+
+# Setting a consistent color scheme across all graphs
+plotOrder <- c("B-127", "U-134", "N-115", "HH-115")
+ewPlotColors <- c("#1B9E77","#D95F02", "#7570B3", "#E7298A")
+names(ewPlotColors) = plotOrder
+ewPlotColors
+```
+
+**FIX THIS TO GO THROUGH FILE PATHS**
+```{r}
+dir(path.save)
+all_cleaned_files <- list.files(path.save, pattern = "\\.csv$", full.names = TRUE)
+if (length(all_cleaned_files) == 0) { stop(...) }
+datLeafLitter <- map_df(all_cleaned_files, read_csv)
+datLeafLitter$plot <- factor(datLeafLitter$plot, levels = plotOrder)
+```
+```{r}
+datLeafLitter$year <- lubridate::year(datLeafLitter$date_collection)
+datLeafLitter$yday <- lubridate::yday(datLeafLitter$date_collection)
+datLeafLitter$week <- lubridate::week(datLeafLitter$date_collection)
+```
+
+Making a filter to have just the leaf tissue type
+```{r}
+leaf_data <- datLeafLitter %>%
+  filter(tissue == "leaf")
+```
+
+
+____________________________________________________________________________________________________________
+
+
+Histogram to show distribution of Leaf Mass
+```{r}
+ggplot(leaf_data, aes(x = mass_g)) +
+  geom_histogram(binwidth = 0.05, alpha = 0.7) +
+  labs(
+    x = "Leaf Mass (g)",
+    y = "Frequency"
+  ) +
+   scale_fill_manual(values=ewPlotColors) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+Boxplot to show year to year variation in leaf mass
+```{r}
+ggplot(leaf_data, aes(x=factor(year), y=mass_g, fill = factor(year))) +
+  geom_boxplot() +
+  labs(
+    x="Year",
+    y="Leaf Mass (g)",
+    fill="Year"
+  )+
+  scale_fill_manual(values=ewPlotColors) +
+  theme_bw()
+```
+
+Boxplot of leaf mass by year but changed to have a square root scale to better see interquartile range
+```{r}
+ggplot(leaf_data, aes(x = factor(year), y = mass_g, fill = factor(year))) +
+  geom_boxplot() +
+scale_y_sqrt() +
+  labs(
+    x = "Year",
+    y = "Leaf Mass (g^1/2)",
+    fill = "Year"
+  ) +
+  scale_fill_manual(values=ewPlotColors) +
+  theme_bw()
+```
+Boxplot to show week to week variation in leaf mass (across all years)
+```{r}
+ggplot(leaf_data, aes(x = factor(week), y = mass_g, fill = factor(week))) +
+  geom_boxplot() +
+  labs(
+    x = "Week",
+    y = "Leaf Mass (g)",
+    fill = "Week" # Label for the fill legend
+  ) +
+  scale_fill_manual(values=ewPlotColors) +
+  theme_bw()
+```
+Boxplot of leaf mass by week w/ sqrt scale
+```{r}
+ggplot(leaf_data, aes(x = factor(week), y = mass_g, fill = factor(week))) +
+  geom_boxplot() +
+  scale_y_sqrt() +
+  labs(
+    x = "Week",
+    y = "Leaf Mass (g^1/2)",
+    fill = "Week" # Label for the fill legend
+  ) +
+  scale_fill_manual(values=ewPlotColors) +
+  theme_bw()
+```
+
+Tissue Type by Week
+```{r}
+tissue_mass_by_week <- datLeafLitter %>%
+  group_by(week, tissue) %>%
+  summarise(total_mass_g = sum(mass_g, na.rm = TRUE)) %>%
+  ungroup() # Always ungroup after summarizing
+
+ggplot(tissue_mass_by_week, aes(x = factor(week), y = total_mass_g, fill = tissue)) +
+  geom_col() +
+  labs(
+    x = "Week",
+    y = "Total Mass (g)",
+    fill = "Tissue Type"
+  )
+```
+
+Leaf mass by genus by week
+```{r}
+leaf_mass_by_genus_week <-  %>%
+  filter(tissue == "leaf") %>%
+  group_by(year, week, genus) %>%
+  summarise(total_leaf_mass_g = sum(mass_g, na.rm = TRUE)) %>%
+  ungroup()
+
+ggplot(leaf_mass_by_genus_week, aes(x = factor(week), y = total_leaf_mass_g, fill = genus)) +
+  geom_col() + 
+  facet_wrap(~ year, scales = "free_x")
+  labs(
+    title = "Total Leaf Mass by Genus and Week",
+    x = "Week of Year",
+    y = "Total Leaf Mass (g)",
+    fill = "Genus"
+  )
+```
+Calculate 50% Cumulative Leaf Fall Day for each year
+```{r}
+leaf_fall_timing50 <- leaf_data %>%
+  group_by(year, yday) %>%
+  summarise(daily_leaf_mass = sum(mass_g, na.rm = TRUE), .groups = 'drop_last') %>%
+  mutate(cumulative_leaf_mass = cumsum(daily_leaf_mass),
+         annual_total_leaf_mass = max(cumulative_leaf_mass, na.rm = TRUE)) %>%
+  ungroup() %>%
+  
+# Filter to find the first day where cumulative mass crosses 50% threshold
+  filter(cumulative_leaf_mass >= 0.5 * annual_total_leaf_mass) %>%
+  group_by(year) %>%
+  slice_min(order_by = yday, n = 1) %>% 
+  select(year, leaf_fall_doy_50percent = yday) %>%
+  ungroup()
+
+
+print(leaf_fall_timing50)
+```
+
+Can do the same by plot
+```{r}
+leaf_fall_timing_by_plot <- leaf_data %>%
+  group_by(year, plot, yday) %>%
+  summarise(daily_leaf_mass = sum(mass_g, na.rm = TRUE), .groups = 'drop_last') %>%
+  mutate(cumulative_leaf_mass = cumsum(daily_leaf_mass),
+         annual_plot_total_leaf_mass = max(cumulative_leaf_mass, na.rm = TRUE)) %>%
+  ungroup() %>%
+  filter(cumulative_leaf_mass >= 0.5 * annual_plot_total_leaf_mass) %>%
+  group_by(year, plot) %>%
+  slice_min(order_by = yday, n = 1) %>% 
+  select(year, plot, leaf_fall_plot_50percent = yday) %>% 
+  ungroup()
+
+print(leaf_fall_timing_by_plot)
+```
+**Note: we can play around with what percentage we use to find the best fit**
+
+```{r}
+ggplot(data=leaf_data)+
+  facet_grid(year~plot)+
+  geom_point(aes(x=yday, y=mass_g, color=factor(plot)))+
+  stat_summary(geom="line", aes(x=yday, y=mass_g), fun="mean")+
+  geom_vline(data=leaf_fall_timing_by_plot, aes(xintercept = leaf_fall_plot_50percent), linetype="dashed")+ labs(x="day of year", y="mass (g)")+
+   scale_color_manual(values=ewPlotColors) +
+  theme_bw()  
+```
+
