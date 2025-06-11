@@ -2,7 +2,9 @@
 title: "03_Leaflitter_cierra_eda"
 author: "Cierra Lizer"
 date: "2025-06-05"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
