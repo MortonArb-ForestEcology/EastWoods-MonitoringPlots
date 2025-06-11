@@ -231,3 +231,58 @@ dominant_species <- leaf_data %>%
 print(dominant_species)
 ```
 
+Filter by plots
+```{r}
+N115_leaf_data <- leaf_data %>%
+  filter(plot == "N-115")
+
+HH115_leaf_data <- leaf_data %>%
+  filter(plot == "HH-115")
+
+B127_leaf_data <- leaf_data %>%
+  filter(plot == "B-127")
+
+U134_leaf_data <- leaf_data %>%
+  filter(plot == "U-134")
+```
+
+
+```{r}
+N115_dominant_species <- N115_leaf_data %>%
+  group_by(genus, species) %>%      
+  summarise(total_leaf_mass_g = sum(mass_g, na.rm = TRUE)) %>% 
+  arrange(desc(total_leaf_mass_g)) %>% 
+  ungroup()
+
+print(N115_dominant_species)
+```
+
+```{r}
+HH115_dominant_species <- HH115_leaf_data %>%
+  group_by(genus, species) %>%      
+  summarise(total_leaf_mass_g = sum(mass_g, na.rm = TRUE)) %>% 
+  arrange(desc(total_leaf_mass_g)) %>% 
+  ungroup()
+
+print(HH115_dominant_species)
+```
+
+```{r}
+B127_dominant_species <- B127_leaf_data %>%
+  group_by(genus, species) %>%      
+  summarise(total_leaf_mass_g = sum(mass_g, na.rm = TRUE)) %>% 
+  arrange(desc(total_leaf_mass_g)) %>% 
+  ungroup()
+
+print(B127_dominant_species)
+```
+
+```{r}
+U134_dominant_species <- U134_leaf_data %>%
+  group_by(genus, species) %>%      
+  summarise(total_leaf_mass_g = sum(mass_g, na.rm = TRUE)) %>% 
+  arrange(desc(total_leaf_mass_g)) %>% 
+  ungroup()
+
+print(U134_dominant_species)
+```
