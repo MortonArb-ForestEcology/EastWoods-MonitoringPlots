@@ -220,3 +220,14 @@ ggplot(data=leaf_data)+
   theme_bw()  
 ```
 
+
+```{r}
+dominant_species <- leaf_data %>%
+  group_by(genus, species) %>%      
+  summarise(total_leaf_mass_g = sum(mass_g, na.rm = TRUE)) %>% 
+  arrange(desc(total_leaf_mass_g)) %>% 
+  ungroup()
+
+print(dominant_species)
+```
+
