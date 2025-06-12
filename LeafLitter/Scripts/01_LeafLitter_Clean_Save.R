@@ -20,8 +20,8 @@ if(!dir.exists(path.save)) dir.create(path.save, recursive=T)
 
 # Should we overwrite old data or not?
 overwrite=T
-yrsCheck = 2018:2025
-
+# yrsCheck = 2018:2025
+yrsCheck = 2025
 # The Google Drive key ID for the leaf litter spreadsheet; 
 keyLeafLitter <- "1d7Py4ehN2PmrmKmyv2hDUkX4fWa95xdlQlGVBN9x20g" 
 
