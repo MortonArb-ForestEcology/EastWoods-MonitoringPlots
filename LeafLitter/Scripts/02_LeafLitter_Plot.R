@@ -47,7 +47,7 @@ datLeafLitter <- map_df(all_cleaned_files, read_csv)
 datLeafLitter$plot <- factor(datLeafLitter$plot, levels = plotOrder)
 summary(datLeafLitter)
 
-
+datLeafLitter[is.na(datLeafLitter$plot),]
 
 
 ##figure out what I need to do for this because we haven't defined or pulled a datLeaflitter yet

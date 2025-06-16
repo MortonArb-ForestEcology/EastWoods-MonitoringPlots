@@ -1,0 +1,164 @@
+# Exploring the leaf litter data to identify peak times of deposition
+
+library(ggplot2)
+library(tidyverse)
+
+# Set up file paths etc. --> this should also indicate where you can find these files!
+path.google <- "~/Google Drive/My Drive"
+path.litter <- file.path(path.google, "East Woods/Rollinson_Monitoring/Data/Leaf_litter_data")
+path.figs <- file.path(path.litter, "figures") # where we shoudl save some figures
+path.save <- file.path(path.litter, "LeafLitterData_Clean_forArchiving") # Where we shoudl save the data
+
+
+# Using a formatting theme consistent with what Meghan has done
+theme_base <-   theme(panel.grid.major = element_blank(),
+                      panel.grid.minor = element_blank(),
+                      panel.border = element_rect(fill="white", colour = "black", linewidth=0.7),
+                      axis.title.x = element_text(margin = margin(t = 10, b=5), size=14),
+                      axis.title.y = element_text(margin = margin(l = 5, r=5), size=14),
+                      axis.text.x= element_text(margin = margin(t = 10), size=12),
+                      axis.text.y=element_text(margin = margin(r = 10), size=12),
+                      axis.ticks.length=unit(-0.3, "cm"),
+                      # axis.ticks.margin=unit(0.5, "cm"),
+                      axis.ticks = element_line(colour = "black", linewidth = 0.4))
+
+
+# Setting a consistent color scheme across all graphs
+plotOrder <- c("B-127", "U-134", "N-115", "HH-115")
+ewPlotColors <- c("#1B9E77","#D95F02", "#7570B3", "#E7298A")
+names(ewPlotColors) = plotOrder
+ewPlotColors
+
+
+dir(path.save)
+#combine into one dataset
+all_cleaned_files <- list.files(path.save, pattern = "\\.csv$", full.names = TRUE)
+if (length(all_cleaned_files) == 0) { stop(...) }
+datLitter <- map_df(all_cleaned_files, read_csv)
+datLitter$plot <- factor(datLitter$plot, levels = plotOrder)
+summary(datLitter)
+
+datLitter$year <- lubridate::year(datLitter$date_collection)
+datLitter$yday <- lubridate::yday(datLitter$date_collection)
+datLitter$week <- lubridate::week(datLitter$date_collection)
+summary(datLitter)
+
+# There is no HH-115 NE, NW, SE, SW --> it has a weird layout
+datLitter[datLitter$plot=="HH-115" & datLitter$trap_ID %in% c("NE", "NW", "SE", "SW"), "trap_ID"] <- NA
+
+# Finding bags that that are empty or missing
+unique(datLitter$tissue)
+
+datMissing <- datLitter[datLitter$tissue == "MISSING DATA",]
+dim(datMissing)
+summary(datMissing)
+
+
+datNone <- datLitter[datLitter$tissue == "EMPTY BAG",]
+dim(datNone)
+summary(datNone)
+
+# Summing to the trap level
+aggLeafTrap <- aggregate(mass_g ~ year + week + date_collection + plot + trap_ID, data=datLitter[datLitter$tissue=="leaf",], FUN=sum)
+summary(aggLeafTrap)
+
+aggLeafTrap <- rbind(aggLeafTrap, datNone[,c("year", "week", "date_collection", "plot", "trap_ID", "mass_g")], datMissing[,c("year", "week", "date_collection", "plot", "trap_ID", "mass_g")])
+summary(aggLeafTrap)
+
+ggplot(data=aggLeafTrap) +
+  facet_grid(year~plot) +
+  # facet_wrap(~tissue, scales="free_y") +
+  # geom_boxplot(aes(x=as.factor(week), y=mass_g, color=plot)) +
+  geom_point(aes(x=week, y=mass_g, color=plot)) +
+  stat_summary(geom="line", aes(x=week, y=mass_g), fun="mean") +
+  labs(x="week", y="mass (g)") +
+  scale_fill_manual(values=ewPlotColors) +
+  scale_color_manual(values=ewPlotColors) +
+  theme_bw()
+
+# Lets calculate the proportion of leaf fall at any given point in time
+leafTrapTotal <- aggregate(mass_g ~ year + plot + trap_ID, data=aggLeafTrap, FUN=sum)
+names(leafTrapTotal)[names(leafTrapTotal)=="mass_g"] <- "totalMass_year"
+summary(leafTrapTotal)
+hist(leafTrapTotal$totalMass_year)
+hist(leafTrapTotal$totalMass_year[leafTrapTotal$year<2023])
+summary(leafTrapTotal[leafTrapTotal$year<2023,])
+
+# Just doing a check for weirdo names again
+leafTrapTotal2 <- aggregate(mass_g ~ plot + trap_ID, data=aggLeafTrap, FUN=sum)
+summary(leafTrapTotal2)
+
+
+
+
+# Merging our totals into the weekly sums so we can get proportion
+aggLeafTrap <- merge(aggLeafTrap, leafTrapTotal, all=T)
+aggLeafTrap <- aggLeafTrap[!is.na(aggLeafTrap$trap_ID),]
+aggLeafTrap$mass_prop <- aggLeafTrap$mass_g/aggLeafTrap$totalMass_year
+summary(aggLeafTrap)
+aggLeafTrap[is.na(aggLeafTrap$totalMass_year),]
+
+
+ggplot(data=aggLeafTrap) +
+  facet_grid(year~plot) +
+  # facet_wrap(~tissue, scales="free_y") +
+  # geom_boxplot(aes(x=as.factor(week), y=mass_g, color=plot)) +
+  geom_point(aes(x=week, y=mass_prop, color=plot)) +
+  stat_summary(geom="line", aes(x=week, y=mass_prop), fun="mean") +
+  labs(x="week", y="mass (g)") +
+  scale_fill_manual(values=ewPlotColors) +
+  scale_color_manual(values=ewPlotColors) +
+  theme_bw()
+
+# Getting some plot-level summary stats
+aggLeafPlot <- aggregate(cbind(mass_g, mass_prop, totalMass_year)~ year + plot + week + date_collection, data=aggLeafTrap, FUN=mean)
+summary(aggLeafPlot)
+
+weekPeak <- data.frame(year=rep(unique(aggLeafTrap$year), each=length(unique(aggLeafPlot$plot))),
+                       plot=rep(unique(aggLeafPlot$plot)),
+                       week=NA,
+                       date=NA,
+                       propPeak = NA,
+                       prop9Wk = NA,
+                       prop5Wk = NA,
+                       prop3Wk = NA)
+weekPeak <- weekPeak[weekPeak$year<max(weekPeak$year),]
+
+for(YR in unique(weekPeak$year)){
+  datYr <- aggLeafPlot[aggLeafPlot$year==YR,]
+  for(PLT in unique(datYr$plot)){
+    indNow <- which(weekPeak$year==YR & weekPeak$plot==PLT)
+    datPlot <- datYr[datYr$plot==PLT,]
+    
+    indPeak <- which(datPlot$mass_prop==max(datPlot$mass_prop))
+    wkPeak <- datPlot$week[indPeak]
+    weekPeak$week[indNow] <- wkPeak
+    weekPeak$date[indNow] <- as.character(datPlot$date_collection[indPeak])
+    weekPeak$propPeak[indNow] <- datPlot$mass_prop[indPeak]
+    weekPeak$prop9Wk[indNow] <- sum(datPlot$mass_prop[datPlot$week %in% (wkPeak-4):(wkPeak + 4)])
+    weekPeak$prop5Wk[indNow] <- sum(datPlot$mass_prop[datPlot$week %in% (wkPeak-2):(wkPeak + 2)])
+    weekPeak$prop3Wk[indNow] <- sum(datPlot$mass_prop[datPlot$week %in% (wkPeak-1):(wkPeak + 1)])
+  }
+}
+weekPeak$date <- as.Date(weekPeak$date)
+summary(weekPeak)
+weekPeak[weekPeak$prop5Wk<0.5,]
+
+
+write.csv(weekPeak, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter ", "PeakLeafDates_byPlot.csv"), row.names=F)
+
+# Aggregating Leaves to the species level
+aggLeafSpp <- aggregate(mass_g ~ year + week + plot + trap_ID + genus + species, data=datLitter[datLitter$tissue=="leaf",], FUN=sum)
+summary(aggLeafSpp)
+
+# png(file.path(path.figs, "LeafMass_byTrap_byWeek_latest.png"), height=6, width=8, units="in", res=220)
+ggplot(data=aggLeafSpp[aggLeafSpp$genus %in% c("Quercus", "Acer") & aggLeafSpp$species %in% c("alba", "rubra", "saccharum"),]) +
+  facet_grid(year~plot) +
+  # facet_wrap(~tissue, scales="free_y") +
+  geom_boxplot(aes(x=as.factor(week), y=mass_g, color=plot)) +
+  # stat_summary(geom="line", aes(x=week, y=mass_g), fun="mean") +
+  labs(x="week", y="mass (g)") +
+  scale_fill_manual(values=ewPlotColors) +
+  scale_color_manual(values=ewPlotColors) +
+  theme_bw()
+# dev.off()
