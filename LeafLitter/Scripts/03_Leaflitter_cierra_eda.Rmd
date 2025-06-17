@@ -221,14 +221,18 @@ ggplot(data=leaf_data)+
 ```
 
 
+
+___________________________________________________________________________________________________________
+
+*Finding the dominant species by leaf mass*
 ```{r}
-dominant_species <- leaf_data %>%
+dominant_leaf_species <- leaf_data %>%
   group_by(genus, species) %>%      
   summarise(total_leaf_mass_g = sum(mass_g, na.rm = TRUE)) %>% 
   arrange(desc(total_leaf_mass_g)) %>% 
   ungroup()
 
-print(dominant_species)
+print(dominant_leaf_species)
 ```
 
 Filter by plots
@@ -248,41 +252,77 @@ U134_leaf_data <- leaf_data %>%
 
 
 ```{r}
-N115_dominant_species <- N115_leaf_data %>%
+N115_dominant_leaf_species <- N115_leaf_data %>%
   group_by(genus, species) %>%      
   summarise(total_leaf_mass_g = sum(mass_g, na.rm = TRUE)) %>% 
   arrange(desc(total_leaf_mass_g)) %>% 
   ungroup()
 
-print(N115_dominant_species)
+print(N115_dominant_leaf_species)
 ```
 
 ```{r}
-HH115_dominant_species <- HH115_leaf_data %>%
+HH115_dominant_leaf_species <- HH115_leaf_data %>%
   group_by(genus, species) %>%      
   summarise(total_leaf_mass_g = sum(mass_g, na.rm = TRUE)) %>% 
   arrange(desc(total_leaf_mass_g)) %>% 
   ungroup()
 
-print(HH115_dominant_species)
+print(HH115_dominant_leaf_species)
 ```
 
 ```{r}
-B127_dominant_species <- B127_leaf_data %>%
+B127_dominant_leaf_species <- B127_leaf_data %>%
   group_by(genus, species) %>%      
   summarise(total_leaf_mass_g = sum(mass_g, na.rm = TRUE)) %>% 
   arrange(desc(total_leaf_mass_g)) %>% 
   ungroup()
 
-print(B127_dominant_species)
+print(B127_dominant_leaf_species)
 ```
 
 ```{r}
-U134_dominant_species <- U134_leaf_data %>%
+U134_dominant_leaf_species <- U134_leaf_data %>%
   group_by(genus, species) %>%      
   summarise(total_leaf_mass_g = sum(mass_g, na.rm = TRUE)) %>% 
   arrange(desc(total_leaf_mass_g)) %>% 
   ungroup()
 
-print(U134_dominant_species)
+print(U134_dominant_leaf_species)
 ```
+
+___________________________________________________________________________________________________________
+
+*sub-setting my species of interest*
+
+Need to account for both genus and species so we create what we want to get out
+```{r}
+target_species_combo <- list(
+  c(genus = "Quercus", species = "alba"),
+  c(genus = "Quercus", species = "rubra"),
+  c(genus = "Acer", species = "saccharum")
+)
+```
+
+Create an empty dataframe to store data once filtered 
+  Sorry Christy, I saw you hate tibbles...
+```{r}
+species_interest_data <- tibble()
+```
+
+Loop through each target combination of species and genus and filter data
+```{r}
+for (s_combo in target_species_combo) {
+  filtered_subset <- leaf_data %>%
+    filter(genus == s_combo["genus"] & species == s_combo["species"])
+  species_interest_data <- bind_rows(species_interest_data, filtered_subset)
+}
+```
+
+```{r}
+summary(species_interest_data)
+```
+
+
+
+
