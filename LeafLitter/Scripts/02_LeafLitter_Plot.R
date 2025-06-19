@@ -56,6 +56,28 @@ datLeafLitter$yday <- lubridate::yday(datLeafLitter$date_collection)
 datLeafLitter$week <- lubridate::week(datLeafLitter$date_collection)
 summary(datLeafLitter)
 
+
+datLitterWk <- aggregate(mass_g ~ plot + trap_ID + genus + species + tissue + year + week, data=datLeafLitter, FUN=sum, na.rm=T) 
+summary(datLitterWk)
+
+
+
+png(file.path(path.figs, "LeafMass_bySpp_byWeek_latest.png"), height=6, width=8, units="in", res=220)
+ggplot(data=datLeafLitter[datLeafLitter$tissue=="leaf" & !datLeafLitter$species=="unknown",]) +
+  facet_grid(year ~ paste(genus, species)) +
+  # facet_wrap(~tissue, scales="free_y") +
+  geom_point(aes(x=yday, y=mass_g, color=plot)) +
+  stat_summary(geom="line", aes(x=yday, y=mass_g), fun="mean") +
+  labs(x="week", y="mass (g)") +
+  scale_fill_manual(values=ewPlotColors) +
+  scale_color_manual(values=ewPlotColors) +
+  theme_bw()
+dev.off()
+
+unique(paste(datLeafLitter$genus, datLeafLitter$species))
+
+# datLeafLitter[!is.na(datLeafLitter$genus) & datLeafLitter$genus=="Ulmus" & datLeafLitter$species=="unknown",]
+
 aggTrapTotal <- aggregate(mass_g ~ year + plot + trap_ID, data=datLeafLitter, FUN=sum)
 aggTrapTotal$plot <- factor(aggTrapTotal$plot, levels=plotOrder)
 summary(aggTrapTotal)
@@ -129,5 +151,7 @@ ggplot(data=aggTissTrapWk[aggTissTrapWk$tissue=="leaf",]) +
   scale_color_manual(values=ewPlotColors) +
   theme_bw()
 dev.off()
+
+
 
 ################################################
