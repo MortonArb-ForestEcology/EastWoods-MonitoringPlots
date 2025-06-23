@@ -56,6 +56,8 @@ datLeafLitter$yday <- lubridate::yday(datLeafLitter$date_collection)
 datLeafLitter$week <- lubridate::week(datLeafLitter$date_collection)
 summary(datLeafLitter)
 
+datLeafLitter <- datLeafLitter[!(datLeafLitter$plot=="HH-115" & datLeafLitter$trap_ID %in% c("NE", "NW", "SE", "SW")),]
+
 
 datLitterWk <- aggregate(mass_g ~ plot + trap_ID + genus + species + tissue + year + week, data=datLeafLitter, FUN=sum, na.rm=T) 
 summary(datLitterWk)
@@ -121,12 +123,14 @@ dev.off()
 
 
 # - Average biomass by tissue by plot by year
-aggTissTrap <- aggregate(mass_g ~ tissue + year + plot + trap_ID, data=datLeafLitter, FUN=sum)
+aggTissTrap <- aggregate(mass_g ~ tissue + year + plot + trap_ID, data=datLeafLitter[!datLeafLitter$tissue %in% c("EMPTY BAG", "MISSING DATA"),], FUN=sum)
 aggTissTrap$plot <- factor(aggTissTrap$plot, levels=plotOrder)
 summary(aggTissTrap)
 
+# aggTissTrap[aggTissTrap$mass_g<1,]
+
 png(file.path(path.figs, "TissueMass_byPlot_byYear_latest.png"), height=6, width=8, units="in", res=220)
-ggplot(data=aggTissTrap[aggTissTrap$tissue!="EMPTY BAG",]) +
+ggplot(data=aggTissTrap[,]) +
   facet_wrap(~tissue, scales="free_y") +
   geom_boxplot(aes(x=as.factor(year), y=mass_g, fill=plot)) +
   labs(x="Year", y="mass (g)") +
@@ -153,5 +157,18 @@ ggplot(data=aggTissTrapWk[aggTissTrapWk$tissue=="leaf",]) +
 dev.off()
 
 
+ggplot(data=aggTissTrapWk[aggTissTrapWk$tissue=="fruit",]) +
+  facet_grid(year~plot) +
+  # facet_wrap(~tissue, scales="free_y") +
+  geom_point(aes(x=week, y=mass_g, color=plot)) +
+  stat_summary(geom="line", aes(x=week, y=mass_g), fun="mean") +
+  labs(x="week", y="mass (g)") +
+  scale_fill_manual(values=ewPlotColors) +
+  scale_color_manual(values=ewPlotColors) +
+  theme_bw()
 
+# Double checking our fruit mass to make sure things are plausible
+aggTissTrapWk[aggTissTrapWk$tissue=="fruit" & aggTissTrapWk$plot=="HH-115" & aggTissTrapWk$week>35 & aggTissTrapWk$year==2023,]
+
+data.frame(datLeafLitter[datLeafLitter$tissue=="fruit" & datLeafLitter$plot=="HH-115" & datLeafLitter$week>35 & datLeafLitter$year==2023 & datLeafLitter$mass_g>5,])
 ################################################
