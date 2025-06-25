@@ -485,6 +485,43 @@ ggplot(data = weekPeak_sci_name,aes(x = year, y = week, color = sci_name, group 
 ```
 
 ```{r}
-
+ggplot(data = aggLeafPlotSp) +
+  facet_grid(plot ~ sci_name, scales = "free_y") + 
+  geom_line(aes(x = week, y = mass_g, color = as.factor(year), group = as.factor(year))) +
+  geom_point(aes(x = week, y = mass_g, color = as.factor(year))) +
+  labs(x = "Week of Year", y = "Mass", color = "Year") +
+  theme_bw() 
+```
+```{r}
+ggplot(data = aggLeafPlotSp) +
+  facet_grid(plot ~ sci_name, scales = "free_y") + 
+  geom_line(aes(x = week, y = mass_prop, color = as.factor(year), group = as.factor(year))) +
+  geom_point(aes(x = week, y = mass_prop, color = as.factor(year))) +
+  labs(x = "Week of Year", y = "Proportion of Annual Leaf Fall", color = "Year") +
+  theme_bw() 
 ```
 
+```{r}
+ggplot(data = aggLeafPlotSp) +
+  geom_line(aes(x = week, y = mass_g, color = as.factor(year), group = as.factor(year)), linewidth=1) +
+  geom_point(aes(x = week, y = mass_g, color = as.factor(year)), size = 1, alpha = 0.7) +
+  labs(x = "Week of Year", y = "Mass", color = "Year") +
+  theme_bw() 
+```
+
+```{r}
+ggplot(data = aggLeafPlotSp) +
+  facet_wrap(~plot, ncol=2, scales="free_y") + 
+  geom_line(aes(x = week, y = mass_g, color = as.factor(year), group = as.factor(year))) +
+  geom_point(aes(x = week, y = mass_g, color = as.factor(year))) +
+  labs(x = "Week of Year", y = "Proportion of Annual Leaf Fall", color = "Year") +
+  theme_bw() 
+```
+```{r}
+ggplot(data = aggLeafPlotSp) +
+  facet_wrap(~sci_name, ncol=2, scales="free_y") + 
+  geom_line(aes(x = week, y = mass_g, color = as.factor(year), group = as.factor(year))) +
+  geom_point(aes(x = week, y = mass_g, color = as.factor(year))) +
+  labs(x = "Week of Year", y = "Proportion of Annual Leaf Fall", color = "Year") +
+  theme_bw() 
+```
