@@ -94,6 +94,13 @@ ggplot(data=aggTrapTotal) +
 dev.off()
 
 
+ggplot(data=aggTrapTotal) +
+  # facet_wrap(~plot) +
+  geom_boxplot(aes(x=plot, y=mass_g, fill=as.factor(year))) +
+  # scale_fill_manual(values=ewPlotColors) +
+  theme_bw()
+
+
 aggTrapDate <- aggregate(mass_g ~ date_collection + year + yday + plot + trap_ID, data=datLeafLitter, FUN=sum)
 aggTrapDate$plot <- factor(aggTrapDate$plot, levels=plotOrder)
 summary(aggTrapDate)
@@ -172,3 +179,4 @@ aggTissTrapWk[aggTissTrapWk$tissue=="fruit" & aggTissTrapWk$plot=="HH-115" & agg
 
 data.frame(datLeafLitter[datLeafLitter$tissue=="fruit" & datLeafLitter$plot=="HH-115" & datLeafLitter$week>35 & datLeafLitter$year==2023 & datLeafLitter$mass_g>5,])
 ################################################
+

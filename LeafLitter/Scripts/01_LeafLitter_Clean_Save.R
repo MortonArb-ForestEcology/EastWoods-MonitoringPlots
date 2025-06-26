@@ -15,6 +15,8 @@ path.litter <- file.path(path.google, "East Woods/Rollinson_Monitoring/Data/Leaf
 path.figs <- file.path(path.litter, "figures") # where we shoudl save some figures
 path.save <- file.path(path.litter, "LeafLitterData_Clean_forArchiving") # Where we shoudl save the data
 
+googlesheets4::gs4_auth(email="crollinson@mortonarb.org")
+
 if(!dir.exists(path.figs)) dir.create(path.figs, recursive=T)
 if(!dir.exists(path.save)) dir.create(path.save, recursive=T)
 
