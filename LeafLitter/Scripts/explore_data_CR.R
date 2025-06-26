@@ -147,8 +147,69 @@ weekPeak[weekPeak$prop5Wk<0.5,]
 
 write.csv(weekPeak, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter ", "PeakLeafDates_byPlot.csv"), row.names=F)
 
+
+# weekPeakTrap <- data.frame(year=rep(unique(aggLeafTrap$year), each=length(unique(aggLeafPlot$plot))*length(unique(aggLeaf))),
+#                        plot=rep(unique(aggLeafPlot$plot)),
+#                        week=NA,
+#                        date=NA,
+#                        propPeak = NA,
+#                        prop9Wk = NA,
+#                        prop5Wk = NA,
+#                        prop3Wk = NA)
+# weekPeak <- weekPeak[weekPeak$year<max(weekPeak$year),]
+summary(leafTrapTotal)
+for(YR in unique(aggLeafTrap$year)){
+  print(YR)
+  datYr <- aggLeafTrap[aggLeafTrap$year==YR,]
+  for(PLT in unique(datYr$plot)){
+    print(PLT)
+    datPlot <- datYr[datYr$plot==PLT,]
+    for(TRP in unique(datPlot$trap_ID)){
+      indNow <- which(leafTrapTotal$year==YR & leafTrapTotal$plot==PLT & leafTrapTotal$trap_ID==TRP)
+      datTrp <- datPlot[datPlot$trap_ID==TRP,]
+  
+      print(paste(TRP, "-", indNow))
+      indPeak <- which(datTrp$mass_prop==max(datTrp$mass_prop, na.rm=T))
+      wkPeak <- datTrp$week[indPeak]
+      # tmpPleafTrapTotaleak <- data.frame(year = YR, plot=PLT, trap_ID=TRP, week=NA, date=NA, propPeak=NA)
+      leafTrapTotal[indNow,"weekPeak"] <- wkPeak
+      leafTrapTotal[indNow,"date"] <- as.character(datTrp$date_collection[indPeak])
+      leafTrapTotal[indNow,"propPeak"] <- datTrp$mass_prop[indPeak]
+      # tmpPeak[1,"prop9Wk"] <- sum(datTrp$mass_prop[datTrp$week %in% (wkPeak-4):(wkPeak + 4)])
+      # tmpPeak[1,"prop5Wk"] <- sum(datTrp$mass_prop[datTrp$week %in% (wkPeak-2):(wkPeak + 2)])
+      # tmpPeak[1,"prop3Wk"] <- sum(datTrp$mass_prop[datTrp$week %in% (wkPeak-1):(wkPeak + 1)])
+    }
+  }
+}
+# weekPeakTrap$date <- as.Date(weekPeakTrap$date)
+summary(leafTrapTotal)
+summary(leafTrapTotal[is.na(leafTrapTotal$weekPeak),])
+weekPeak[weekPeak$prop5Wk<0.5,]
+
+ggplot(data=leafTrapTotal) +
+  geom_boxplot(aes(x=as.factor(year), y=weekPeak)) +
+  geom_point(aes(x=as.factor(year), y=weekPeak, color=plot), position=position_jitter(0.1))
+
+lmYrs <- lm(week ~ as.factor(year), data=weekPeakTrap)
+summary(lmYrs)
+anova(lmYrs)
+
+library(nlme);  # Does the mixed effects model
+library(emmeans) # will et us do a multi-comparisons test
+lmeYrs <- lme(week ~ as.factor(year), random=list(plot=~1, trap_ID=~1), data=weekPeakTrap)
+summary(lmeYrs)
+anova(lmeYrs)
+
+lmeYrs2021 <- lme(week ~ relevel(as.factor(year), "2021"), random=list(plot=~1, trap_ID=~1), data=weekPeakTrap)
+summary(lmeYrs)
+anova(lmeYrs)
+
+yrsComp <- emmeans(lmeYrs, ~year)
+pairs(yrsComp, adjust="tukey")
+
 # Aggregating Leaves to the species level
 aggLeafSpp <- aggregate(mass_g ~ year + week + plot + trap_ID + genus + species, data=datLitter[datLitter$tissue=="leaf",], FUN=sum)
+aggLeafSpp$sci_name <- as.factor(paste(aggLeafSpp$genus, aggLeafSpp$species))
 summary(aggLeafSpp)
 
 # png(file.path(path.figs, "LeafMass_byTrap_byWeek_latest.png"), height=6, width=8, units="in", res=220)
