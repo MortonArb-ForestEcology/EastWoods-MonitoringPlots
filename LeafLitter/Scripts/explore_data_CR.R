@@ -196,13 +196,13 @@ anova(lmYrs)
 
 library(nlme);  # Does the mixed effects model
 library(emmeans) # will et us do a multi-comparisons test
-lmeYrs <- lme(week ~ as.factor(year), random=list(plot=~1, trap_ID=~1), data=weekPeakTrap)
+lmeYrs <- lme(weekPeak ~ as.factor(year), random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
 summary(lmeYrs)
 anova(lmeYrs)
 
-lmeYrs2021 <- lme(week ~ relevel(as.factor(year), "2021"), random=list(plot=~1, trap_ID=~1), data=weekPeakTrap)
-summary(lmeYrs)
-anova(lmeYrs)
+lmeYrs2021 <- lme(weekPeak ~ relevel(as.factor(year), "2021"), random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
+summary(lmeYrs2021)
+anova(lmeYrs2021)
 
 yrsComp <- emmeans(lmeYrs, ~year)
 pairs(yrsComp, adjust="tukey")
@@ -223,3 +223,79 @@ ggplot(data=aggLeafSpp[aggLeafSpp$genus %in% c("Quercus", "Acer") & aggLeafSpp$s
   scale_color_manual(values=ewPlotColors) +
   theme_bw()
 # dev.off()
+
+
+aggLeafSppTot <- aggregate(mass_g ~ year + plot + trap_ID + genus + species, data=datLitter[datLitter$tissue=="leaf",], FUN=sum, na.rm=T)
+aggLeafSppTot$sci_name <- as.factor(paste(aggLeafSppTot$genus, aggLeafSppTot$species))
+summary(aggLeafSppTot)
+
+
+summary(aggLeafSppTot)
+for(YR in unique(aggLeafSppTot$year)){
+  # print(YR)
+  datYr <- aggLeafSpp[aggLeafSpp$year==YR,]
+  for(PLT in unique(datYr$plot)){
+    # print(PLT)
+    datPlot <- datYr[datYr$plot==PLT,]
+    for(TRP in unique(datPlot$trap_ID)){
+      datTrp <- datPlot[datPlot$trap_ID==TRP,]
+      
+      for(SPP in unique(datTrp$sci_name)){
+        indNow <- which(aggLeafSppTot$year==YR & aggLeafSppTot$plot==PLT & aggLeafSppTot$trap_ID==TRP & aggLeafSppTot$sci_name==SPP)
+        
+        datSpp <- datTrp[datTrp$sci_name==SPP,]
+        # print(paste(TRP, "-", indNow))
+        indPeak <- which(datSpp$mass_g==max(datSpp$mass_g, na.rm=T))
+        if(length(indPeak)>1){
+          wkPeak <- median(datSpp$week[indPeak])
+          indPeak <- indPeak[1]
+        } else {
+          wkPeak <- datSpp$week[indPeak]
+        }
+        # tmpPleafTrapTotaleak <- data.frame(year = YR, plot=PLT, trap_ID=TRP, week=NA, date=NA, propPeak=NA)
+        aggLeafSppTot[indNow,"weekPeak"] <- wkPeak
+        # leafTrapTotal[indNow,"date"] <- as.character(datSpp$date_collection[indPeak])
+        aggLeafSppTot[indNow,"propPeak"] <- datSpp$mass_g[indPeak]/sum(datSpp$mass_g)
+      }
+    }
+  }
+}
+# weekPeakTrap$date <- as.Date(weekPeakTrap$date)
+summary(aggLeafSppTot)
+aggLeafSppTot <- aggLeafSppTot[aggLeafSppTot$year < 2023,]
+# summary(aggLeafSppTot[is.na(aggLeafSppTot$weekPeak),])
+
+
+ggplot(data=aggLeafSppTot[aggLeafSppTot$sci_name %in% c("Acer saccharum", "Quercus alba", "Quercus rubra") & aggLeafSppTot$year < 2023,]) +
+  facet_wrap(~sci_name, ncol=2) +
+  geom_point(aes(x=as.factor(year), y=weekPeak, color=plot), position=position_jitter(0.1)) +
+  geom_boxplot(aes(x=as.factor(year), y=weekPeak)) 
+
+
+lmeYrsSpp <- lme(weekPeak ~ as.factor(year)*sci_name, random=list(plot=~1, trap_ID=~1), data=aggLeafSppTot[aggLeafSppTot$sci_name %in% c("Acer saccharum", "Quercus alba", "Quercus rubra"),])
+summary(lmeYrsSpp)
+anova(lmeYrsSpp)
+
+
+lmeYrsQURU <- lme(weekPeak ~ as.factor(year), random=list(plot=~1, trap_ID=~1), data=aggLeafSppTot[aggLeafSppTot$sci_name %in% c("Quercus rubra"),])
+summary(lmeYrsQURU)
+anova(lmeYrsQURU)
+
+quruComp <- emmeans(lmeYrsQURU, ~year)
+pairs(quruComp, adjust="tukey")
+
+
+lmeYrsQUAL <- lme(weekPeak ~ as.factor(year), random=list(plot=~1, trap_ID=~1), data=aggLeafSppTot[aggLeafSppTot$sci_name %in% c("Quercus alba"),])
+summary(lmeYrsQUAL)
+anova(lmeYrsQUAL)
+
+qualComp <- emmeans(lmeYrsQUAL, ~year)
+pairs(qualComp, adjust="tukey")
+
+
+lmeYrsACSA <- lme(weekPeak ~ as.factor(year), random=list(plot=~1, trap_ID=~1), data=aggLeafSppTot[aggLeafSppTot$sci_name %in% c("Acer saccharum"),])
+summary(lmeYrsACSA)
+anova(lmeYrsACSA)
+
+acsaComp <- emmeans(lmeYrsACSA, ~year)
+pairs(acsaComp, adjust="tukey")
