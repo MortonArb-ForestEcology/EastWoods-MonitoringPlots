@@ -1,0 +1,252 @@
+---
+title: "04_Leaflitter_timing"
+author: "Cierra Lizer"
+date: "2025-06-26"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+```
+
+Set up file paths etc. --> this should also indicate where you can find these files!
+```{r}
+path.google <- "~/Google Drive/My Drive"
+path.litter <- file.path(path.google, "East Woods/Rollinson_Monitoring/Data/Leaf_litter_data")
+path.figs <- file.path(path.litter, "figures") # where we shoudl save some figures
+path.save <- file.path(path.litter, "LeafLitterData_Clean_forArchiving") # Where we shoudl save the data
+```
+
+Using a formatting theme consistent with what Meghan has done
+```{r}
+theme_base <-   theme(panel.grid.major = element_blank(),
+                      panel.grid.minor = element_blank(),
+                      panel.border = element_rect(fill="white", colour = "black", linewidth=0.7),
+                      axis.title.x = element_text(margin = margin(t = 10, b=5), size=14),
+                      axis.title.y = element_text(margin = margin(l = 5, r=5), size=14),
+                      axis.text.x= element_text(margin = margin(t = 10), size=12),
+                      axis.text.y=element_text(margin = margin(r = 10), size=12),
+                      axis.ticks.length=unit(-0.3, "cm"),
+                      # axis.ticks.margin=unit(0.5, "cm"),
+                      axis.ticks = element_line(colour = "black", linewidth = 0.4))
+
+
+# Setting a consistent color scheme across all graphs
+plotOrder <- c("B-127", "U-134", "N-115", "HH-115")
+ewPlotColors <- c("#1B9E77","#D95F02", "#7570B3", "#E7298A")
+names(ewPlotColors) = plotOrder
+ewPlotColors
+```
+
+**FIX THIS TO GO THROUGH FILE PATHS**
+```{r}
+dir(path.save)
+all_cleaned_files <- list.files(path.save, pattern = "\\.csv$", full.names = TRUE)
+if (length(all_cleaned_files) == 0) { stop(...) }
+datLeafLitter <- map_df(all_cleaned_files, read_csv)
+datLeafLitter$plot <- factor(datLeafLitter$plot, levels = plotOrder)
+```
+
+```{r}
+datLeafLitter$year <- lubridate::year(datLeafLitter$date_collection)
+datLeafLitter$yday <- lubridate::yday(datLeafLitter$date_collection)
+datLeafLitter$week <- lubridate::week(datLeafLitter$date_collection)
+```
+
+Making a filter to have just the leaf tissue type
+```{r}
+leaf_data <- datLeafLitter %>%
+  filter(tissue == "leaf")
+```
+
+Need to account for both genus and species so we create what we want to get out
+```{r}
+target_species_combo <- list(
+  c(genus = "Quercus", species = "alba"),
+  c(genus = "Quercus", species = "rubra"),
+  c(genus = "Acer", species = "saccharum")
+)
+```
+
+Create an empty dataframe to store data once filtered 
+  Sorry Christy, I saw you hate tibbles...
+```{r}
+species_interest_data <- tibble()
+```
+
+Loop through each target combination of species and genus and filter data
+```{r}
+for (s_combo in target_species_combo) {
+  filtered_subset <- leaf_data %>%
+    filter(genus == s_combo["genus"] & species == s_combo["species"])
+  species_interest_data <- bind_rows(species_interest_data, filtered_subset)
+}
+```
+
+```{r}
+summary(species_interest_data)
+```
+
+```{r}
+species_interest_data$sci_name <- paste(species_interest_data$genus, species_interest_data$species, sep = " ")
+summary(species_interest_data$sci_name)
+head(species_interest_data$sci_name)
+```
+
+```{r}
+leafSpTotal <- aggregate(mass_g ~ year + plot + trap_ID + sci_name,
+                           data = species_interest_data,
+                           FUN = sum,
+                           na.action = na.omit) # Add na.action to handle NA values if any
+names(leafSpTotal)[names(leafSpTotal)=="mass_g"] <- "totalMass_year_sci_name"
+summary(leafSpTotal)
+hist(leafSpTotal$totalMass_year_sci_name)
+hist(leafSpTotal$totalMass_year_sci_name[leafSpTotal$year < max(leafSpTotal$year)]) 
+summary(leafSpTotal[leafSpTotal$year < max(leafSpTotal$year),])
+```
+Merge Totals and calculate proportion
+```{r}
+# Merging our totals into the weekly sums so we can get proportion
+species_interest_data <- merge(species_interest_data, leafSpTotal,
+                               by = c("year", "plot", "trap_ID", "sci_name"),
+                               all.x = TRUE) 
+
+# Clean rows where trap_ID might be NA after merge (shouldn't happen if all.x=TRUE and trap_ID is always present)
+species_interest_data <- species_interest_data[!is.na(species_interest_data$trap_ID),]
+
+# Calculate the proportion
+species_interest_data$mass_prop <- species_interest_data$mass_g / species_interest_data$totalMass_year_sci_name
+summary(species_interest_data)
+
+species_interest_data[is.na(species_interest_data$totalMass_year_scientific_name),]
+```
+
+```{r}
+aggLeafPlotSp <- aggregate(cbind(mass_g, mass_prop, totalMass_year_sci_name) ~ year + plot + week + date_collection + sci_name,
+                         data = species_interest_data,
+                         FUN = mean,
+                         na.action = na.pass)
+summary(aggLeafPlotSp)
+```
+
+
+___________________________________________________________________________________________________________
+
+*Differences in Plots*
+
+Boxplots
+```{r}
+ggplot(data = aggLeafPlotSp[aggLeafPlotSp$week %in% 40:50 & aggLeafPlotSp$year %in% c(2018, 2021, 2022),]) +
+  geom_boxplot(aes(x = as.factor(week), y = mass_g, color = as.factor(year))) +
+  labs(x = "Week of Year", y = "Mass", color = "Year") +
+  scale_color_manual(values=c("green4","blue3","purple2")) +
+  # coord_cartesian(xlim = c(40, 50)) +
+  theme_bw() 
+```
+Scatter of Medians
+```{r}
+ggplot(data = aggLeafPlotSp[aggLeafPlotSp$week %in% 40:50 & aggLeafPlotSp$year %in% c(2018, 2021, 2022),]) +
+  stat_summary(fun = median, geom = "point",
+         aes(x = as.factor(week), y = mass_g, color = as.factor(year), group = as.factor(year)), size=2) +
+   geom_smooth(aes(x = as.factor(week), y = mass_g, color = as.factor(year), group = as.factor(year)),
+              method = "loess", se = FALSE) + 
+  labs(x = "Week of Year", y = "Mass", color = "Year") +
+   scale_color_manual(values=c("green4","blue3","purple2")) +
+  # coord_cartesian(xlim = c(40, 50)) +
+  theme_bw()
+```
+
+ANOVA
+```{r}
+year_model <- aov(week ~ as.factor(year), data =aggLeafPlotSp)
+summary(year_model)
+```
+```{r}
+TukeyHSD(year_model)
+```
+
+
+___________________________________________________________________________________________________________
+
+*Differences in Plots*
+
+Boxplots
+```{r}
+ggplot(data = aggLeafPlotSp[aggLeafPlotSp$week %in% 40:50,]) +
+  geom_boxplot(aes(x = as.factor(week), y = mass_g, color = as.factor(plot))) +
+  labs(x = "Week of Year", y = "Mass", color = "plot") +
+  # coord_cartesian(xlim = c(40, 50)) +
+  scale_color_manual(values=ewPlotColors) +
+  theme_bw() 
+```
+
+Scatter of Medians
+```{r}
+ggplot(data = aggLeafPlotSp[aggLeafPlotSp$week %in% 40:50,]) +
+  stat_summary(fun = median, geom = "point",
+               aes(x = as.factor(week), y = mass_g, color = plot, group = plot), size=2) +
+   geom_smooth(aes(x = as.factor(week), y = mass_g, color = plot, group = plot),
+              method = "loess", se = FALSE) + 
+  labs(x = "Week of Year", y = "Mass", color = "Plot") +
+  # coord_cartesian(xlim = c(40, 50)) +
+  scale_color_manual(values=ewPlotColors) +
+  theme_bw()
+```
+
+ANOVA
+```{r}
+plot_model <- aov(week ~ plot, data =aggLeafPlotSp)
+summary(plot_model)
+```
+___________________________________________________________________________________________________________
+
+*Differences in species*
+
+Boxplots
+```{r}
+ggplot(data = aggLeafPlotSp[aggLeafPlotSp$week %in% 40:50,]) +
+  geom_boxplot(aes(x = as.factor(week), y = mass_g, color = sci_name)) +
+  labs(x = "Week of Year", y = "Mass", color = "Species") +
+  # coord_cartesian(xlim = c(40, 50))
+  scale_color_manual(values=c("red3","orange2","gold2")) +
+  theme_bw() 
+```
+
+Scatter of Medians
+```{r}
+ggplot(data = aggLeafPlotSp[aggLeafPlotSp$week %in% 40:50,]) +
+  stat_summary(fun = median, geom = "point",
+               aes(x = as.factor(week), y = mass_g, color = sci_name, group = sci_name), size=2) +
+   geom_smooth(aes(x = as.factor(week), y = mass_g, color = sci_name, group = sci_name),
+              method = "loess", se = FALSE) + 
+  labs(x = "Week of Year", y = "Mass", color = "Species") +
+  scale_color_manual(values=c("red3","orange2","gold2")) +
+  # coord_cartesian(xlim = c(40, 50)) +
+  theme_bw()
+```
+
+Calculate total mass for each species per week
+```{r}
+total_mass_per_week_sp <- aggLeafPlotSp %>%
+  group_by(sci_name, week) %>%
+  summarise(total_mass_spec_week = sum(mass_g, na.rm = TRUE), .groups = 'drop_last') # .groups = 'drop_last' keeps sci_name grouped
+```
+From weekly total, calculate week with maximum mass for each species
+```{r}
+max_mass_week_species <- total_mass_per_week_sp %>%
+  filter(total_mass_spec_week == max(total_mass_spec_week, na.rm = TRUE)) %>%
+  ungroup()
+print(max_mass_week_species)
+```
+
+ANOVA
+```{r}
+spec_model <- aov(week ~ sci_name, data =aggLeafPlotSp)
+summary(spec_model)
+```

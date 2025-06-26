@@ -502,10 +502,10 @@ ggplot(data = aggLeafPlotSp) +
 ```
 
 ```{r}
-ggplot(data = aggLeafPlotSp) +
-  geom_line(aes(x = week, y = mass_g, color = as.factor(year), group = as.factor(year)), linewidth=1) +
-  geom_point(aes(x = week, y = mass_g, color = as.factor(year)), size = 1, alpha = 0.7) +
+ggplot(data = aggLeafPlotSp[aggLeafPlotSp$week %in% 40:50 & aggLeafPlotSp$year %in% c(2018, 2021, 2022),]) +
+  geom_line(aes(x = as.factor(week), y = mass_prop, color = as.factor(year)), size = 1, alpha = 0.7) +
   labs(x = "Week of Year", y = "Mass", color = "Year") +
+  # coord_cartesian(xlim = c(40, 50)) +
   theme_bw() 
 ```
 
