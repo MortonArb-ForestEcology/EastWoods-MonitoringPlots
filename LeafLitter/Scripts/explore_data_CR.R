@@ -43,6 +43,10 @@ datLitter$yday <- lubridate::yday(datLitter$date_collection)
 datLitter$week <- lubridate::week(datLitter$date_collection)
 summary(datLitter)
 
+datLitter <- datLitter[datLitter$year<2023,]
+summary(datLitter)
+
+
 # There is no HH-115 NE, NW, SE, SW --> it has a weird layout
 datLitter[datLitter$plot=="HH-115" & datLitter$trap_ID %in% c("NE", "NW", "SE", "SW"), "trap_ID"] <- NA
 
@@ -190,7 +194,7 @@ ggplot(data=leafTrapTotal) +
   geom_boxplot(aes(x=as.factor(year), y=weekPeak)) +
   geom_point(aes(x=as.factor(year), y=weekPeak, color=plot), position=position_jitter(0.1))
 
-lmYrs <- lm(week ~ as.factor(year), data=weekPeakTrap)
+lmYrs <- lm(weekPeak ~ as.factor(year), data=leafTrapTotal)
 summary(lmYrs)
 anova(lmYrs)
 
@@ -214,9 +218,9 @@ summary(aggLeafSpp)
 
 # png(file.path(path.figs, "LeafMass_byTrap_byWeek_latest.png"), height=6, width=8, units="in", res=220)
 ggplot(data=aggLeafSpp[aggLeafSpp$genus %in% c("Quercus", "Acer") & aggLeafSpp$species %in% c("alba", "rubra", "saccharum"),]) +
-  facet_grid(year~plot) +
+  facet_grid(year~sci_name) +
   # facet_wrap(~tissue, scales="free_y") +
-  geom_boxplot(aes(x=as.factor(week), y=mass_g, color=plot)) +
+  geom_boxplot(aes(x=as.factor(week), y=mass_g)) +
   # stat_summary(geom="line", aes(x=week, y=mass_g), fun="mean") +
   labs(x="week", y="mass (g)") +
   scale_fill_manual(values=ewPlotColors) +
@@ -299,3 +303,11 @@ anova(lmeYrsACSA)
 
 acsaComp <- emmeans(lmeYrsACSA, ~year)
 pairs(acsaComp, adjust="tukey")
+
+# Just out of Christy's curiosity
+lmeYrsTIAM <- lme(weekPeak ~ as.factor(year), random=list(plot=~1, trap_ID=~1), data=aggLeafSppTot[aggLeafSppTot$sci_name %in% c("Tilia americana"),])
+summary(lmeYrsTIAM)
+anova(lmeYrsTIAM)
+
+tiamComp <- emmeans(lmeYrsTIAM, ~year)
+pairs(tiamComp, adjust="tukey")
