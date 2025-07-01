@@ -55,4 +55,4 @@ for(i in 1:nrow(metJJAyr)){
 }
 
 metJJAyr
-write.csv(metJJAyr, "daymet_June-July-August_summaries_2017-2023.csv", row.names=F)
+write.csv(metJJAyr, file.path(pathOut, "daymet_June-July-August_summaries_2017-2023.csv"), row.names=F)

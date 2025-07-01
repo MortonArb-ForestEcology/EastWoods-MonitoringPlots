@@ -46,6 +46,8 @@ summary(datLitter)
 datLitter <- datLitter[datLitter$year<2023,]
 summary(datLitter)
 
+metSummer <- read.csv("~/Google Drive/My Drive/URF REU 2025 - Lizer - Leaf Litter /data/daymet/daymet_June-July-August_summaries_2017-2023.csv")
+
 
 # There is no HH-115 NE, NW, SE, SW --> it has a weird layout
 datLitter[datLitter$plot=="HH-115" & datLitter$trap_ID %in% c("NE", "NW", "SE", "SW"), "trap_ID"] <- NA
@@ -190,19 +192,62 @@ summary(leafTrapTotal)
 summary(leafTrapTotal[is.na(leafTrapTotal$weekPeak),])
 weekPeak[weekPeak$prop5Wk<0.5,]
 
+leafTrapTotal <- merge(leafTrapTotal, metSummer, all.x=T)
+summary(leafTrapTotal)
+
 ggplot(data=leafTrapTotal) +
   geom_boxplot(aes(x=as.factor(year), y=weekPeak)) +
   geom_point(aes(x=as.factor(year), y=weekPeak, color=plot), position=position_jitter(0.1))
+
+
+ggplot(data=leafTrapTotal) +
+  # geom_boxplot(aes(x=as.factor(year), y=weekPeak)) +
+  geom_point(aes(x=n.Rainless, y=weekPeak, color=plot))
+
+ggplot(data=leafTrapTotal) +
+  # geom_boxplot(aes(x=as.factor(year), y=weekPeak)) +
+  geom_point(aes(x=prcp..mm.day., y=weekPeak, color=plot))
 
 lmYrs <- lm(weekPeak ~ as.factor(year), data=leafTrapTotal)
 summary(lmYrs)
 anova(lmYrs)
 
+lmPrecip <- lm(weekPeak ~ n.Rainless, data=leafTrapTotal)
+summary(lmPrecip)
+anova(lmPrecip)
+
 library(nlme);  # Does the mixed effects model
 library(emmeans) # will et us do a multi-comparisons test
+
+
 lmeYrs <- lme(weekPeak ~ as.factor(year), random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
 summary(lmeYrs)
 anova(lmeYrs)
+
+lmeRainless <- lme(weekPeak ~ n.Rainless, random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
+summary(lmeRainless)
+anova(lmeRainless)
+
+lmeRainlessConsec <- lme(weekPeak ~ RainlessConsec.max , random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
+summary(lmeRainlessConsec)
+anova(lmeRainlessConsec)
+
+lmePrcp <- lme(weekPeak ~ prcp..mm.day., random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
+summary(lmePrcp)
+anova(lmePrcp)
+
+lmeTmax <- lme(weekPeak ~ tmax..deg.c., random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
+summary(lmeTmax)
+anova(lmeTmax)
+
+lmeTmaxRainless <- lme(weekPeak ~ RainlessConsec.Tmax.mean , random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
+summary(lmeTmaxRainless)
+anova(lmeTmaxRainless)
+
+lmeVP <- lme(weekPeak ~ vp..Pa., random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
+summary(lmeVP)
+anova(lmeVP)
+
 
 lmeYrs2021 <- lme(weekPeak ~ relevel(as.factor(year), "2021"), random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
 summary(lmeYrs2021)
