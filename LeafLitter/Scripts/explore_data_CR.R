@@ -43,7 +43,7 @@ datLitter$yday <- lubridate::yday(datLitter$date_collection)
 datLitter$week <- lubridate::week(datLitter$date_collection)
 summary(datLitter)
 
-datLitter <- datLitter[datLitter$year<2023,]
+datLitter <- datLitter[datLitter$year<2024,]
 summary(datLitter)
 
 metSummer <- read.csv("~/Google Drive/My Drive/URF REU 2025 - Lizer - Leaf Litter /data/daymet/daymet_June-July-August_summaries_2017-2023.csv")
@@ -51,6 +51,8 @@ metSummer <- read.csv("~/Google Drive/My Drive/URF REU 2025 - Lizer - Leaf Litte
 
 # There is no HH-115 NE, NW, SE, SW --> it has a weird layout
 datLitter[datLitter$plot=="HH-115" & datLitter$trap_ID %in% c("NE", "NW", "SE", "SW"), "trap_ID"] <- NA
+
+datLitter <- datLitter[!is.na(datLitter$trap_ID),]
 
 # Finding bags that that are empty or missing
 unique(datLitter$tissue)
@@ -71,12 +73,68 @@ summary(aggLeafTrap)
 aggLeafTrap <- rbind(aggLeafTrap, datNone[,c("year", "week", "date_collection", "plot", "trap_ID", "mass_g")], datMissing[,c("year", "week", "date_collection", "plot", "trap_ID", "mass_g")])
 summary(aggLeafTrap)
 
+# Now going through each plot & trap get the *rate* of deposition
+allCollect = NULL
+# plotsCore <- c("N", "S", "E", "W")
+# plotExtra <- c("NW", "SW", "NE", "SE")
+for(PLT in unique(aggLeafTrap$plot)){
+  datPLT <- aggLeafTrap[aggLeafTrap$plot==PLT,]
+  datPLT <- droplevels(datPLT)
+  
+  datePLT <- unique(datPLT$date_collection)
+  datePLT <- sort(datePLT)
+  daysPLT <- diff(datePLT)
+  # Making a data frame with all collections dates and traps for the plot
+  # That way we can add in plots as missing if they're not there
+  dfCollection <- data.frame(plot=PLT, trap_ID = rep(unique(datPLT$trap_ID), each=length(datePLT)),
+                             date_collection=datePLT, days_collection=c(NA, daysPLT))
+                            
+  
+  if(is.null(allCollect)){
+    allCollect <- dfCollection
+  } else {
+    allCollect <- rbind(allCollect, dfCollection)
+  }
+}
+summary(allCollect)
+
+# Merging the number of days in each collection period with the actual data
+summary(allCollect)
+hist(allCollect$days_collection)
+
+
+# aggLeafTrap[aggLeafTrap$year==2022 & aggLeafTrap$date_collection<as.Date("2022-08-15")  & aggLeafTrap$plot=="B-127",]
+dim(aggLeafTrap)
+aggLeafTrap <- merge(aggLeafTrap, allCollect, all=T)
+aggLeafTrap$year <- lubridate::year(aggLeafTrap$date_collection)
+aggLeafTrap$week <- lubridate::week(aggLeafTrap$date_collection)
+summary(aggLeafTrap)
+
+# This added in a lot of NAs because we added half our traps a couple years in
+for(PLT in unique(aggLeafTrap$plot)){
+  for(TRP in unique(aggLeafTrap$trap_ID[aggLeafTrap$plot==PLT])){
+    minTrap <- min(aggLeafTrap$date_collection[aggLeafTrap$plot==PLT & aggLeafTrap$trap_ID==TRP & !is.na(aggLeafTrap$mass_g)] ,na.rm=T)
+    
+    # test <- aggLeafTrap[aggLeafTrap$plot==PLT & aggLeafTrap==TRP & aggLeafTrap$date_collection>minTrap,]
+    
+    aggLeafTrap <- aggLeafTrap[aggLeafTrap$plot!=PLT | (aggLeafTrap$plot==PLT & aggLeafTrap$trap_ID!=TRP) | 
+                                 (aggLeafTrap$plot==PLT & aggLeafTrap$trap_ID==TRP & aggLeafTrap$date_collection>minTrap),]
+  }
+}
+
+
+dim(aggLeafTrap)
+summary(aggLeafTrap)
+
+aggLeafTrap$mass_g_day <- aggLeafTrap$mass_g/aggLeafTrap$days_collection
+summary(aggLeafTrap)
+
 ggplot(data=aggLeafTrap) +
   facet_grid(year~plot) +
   # facet_wrap(~tissue, scales="free_y") +
   # geom_boxplot(aes(x=as.factor(week), y=mass_g, color=plot)) +
-  geom_point(aes(x=week, y=mass_g, color=plot)) +
-  stat_summary(geom="line", aes(x=week, y=mass_g), fun="mean") +
+  geom_point(aes(x=week, y=mass_g_day, color=plot)) +
+  stat_summary(geom="line", aes(x=week, y=mass_g_day), fun="mean") +
   labs(x="week", y="mass (g)") +
   scale_fill_manual(values=ewPlotColors) +
   scale_color_manual(values=ewPlotColors) +
@@ -87,8 +145,8 @@ leafTrapTotal <- aggregate(mass_g ~ year + plot + trap_ID, data=aggLeafTrap, FUN
 names(leafTrapTotal)[names(leafTrapTotal)=="mass_g"] <- "totalMass_year"
 summary(leafTrapTotal)
 hist(leafTrapTotal$totalMass_year)
-hist(leafTrapTotal$totalMass_year[leafTrapTotal$year<2023])
-summary(leafTrapTotal[leafTrapTotal$year<2023,])
+hist(leafTrapTotal$totalMass_year[leafTrapTotal$year<2024])
+summary(leafTrapTotal[leafTrapTotal$year<2024,])
 
 # Just doing a check for weirdo names again
 leafTrapTotal2 <- aggregate(mass_g ~ plot + trap_ID, data=aggLeafTrap, FUN=sum)
@@ -117,7 +175,7 @@ ggplot(data=aggLeafTrap) +
   theme_bw()
 
 # Getting some plot-level summary stats
-aggLeafPlot <- aggregate(cbind(mass_g, mass_prop, totalMass_year)~ year + plot + week + date_collection, data=aggLeafTrap, FUN=mean)
+aggLeafPlot <- aggregate(cbind(mass_g, mass_g_day, mass_prop, totalMass_year)~ year + plot + week + date_collection, data=aggLeafTrap, FUN=mean)
 summary(aggLeafPlot)
 
 weekPeak <- data.frame(year=rep(unique(aggLeafTrap$year), each=length(unique(aggLeafPlot$plot))),
@@ -128,7 +186,7 @@ weekPeak <- data.frame(year=rep(unique(aggLeafTrap$year), each=length(unique(agg
                        prop9Wk = NA,
                        prop5Wk = NA,
                        prop3Wk = NA)
-weekPeak <- weekPeak[weekPeak$year<max(weekPeak$year),]
+# weekPeak <- weekPeak[weekPeak$year<max(weekPeak$year),]
 
 for(YR in unique(weekPeak$year)){
   datYr <- aggLeafPlot[aggLeafPlot$year==YR,]
@@ -136,7 +194,7 @@ for(YR in unique(weekPeak$year)){
     indNow <- which(weekPeak$year==YR & weekPeak$plot==PLT)
     datPlot <- datYr[datYr$plot==PLT,]
     
-    indPeak <- which(datPlot$mass_prop==max(datPlot$mass_prop))
+    indPeak <- which(datPlot$mass_g_day==max(datPlot$mass_g_day))
     wkPeak <- datPlot$week[indPeak]
     weekPeak$week[indNow] <- wkPeak
     weekPeak$date[indNow] <- as.character(datPlot$date_collection[indPeak])
@@ -175,7 +233,7 @@ for(YR in unique(aggLeafTrap$year)){
       datTrp <- datPlot[datPlot$trap_ID==TRP,]
   
       print(paste(TRP, "-", indNow))
-      indPeak <- which(datTrp$mass_prop==max(datTrp$mass_prop, na.rm=T))
+      indPeak <- which(datTrp$mass_g_day==max(datTrp$mass_g_day, na.rm=T))
       wkPeak <- datTrp$week[indPeak]
       # tmpPleafTrapTotaleak <- data.frame(year = YR, plot=PLT, trap_ID=TRP, week=NA, date=NA, propPeak=NA)
       leafTrapTotal[indNow,"weekPeak"] <- wkPeak
@@ -190,7 +248,7 @@ for(YR in unique(aggLeafTrap$year)){
 # weekPeakTrap$date <- as.Date(weekPeakTrap$date)
 summary(leafTrapTotal)
 summary(leafTrapTotal[is.na(leafTrapTotal$weekPeak),])
-weekPeak[weekPeak$prop5Wk<0.5,]
+# weekPeak[weekPeak$prop5Wk<0.5,]
 
 leafTrapTotal <- merge(leafTrapTotal, metSummer, all.x=T)
 summary(leafTrapTotal)
@@ -212,9 +270,9 @@ lmYrs <- lm(weekPeak ~ as.factor(year), data=leafTrapTotal)
 summary(lmYrs)
 anova(lmYrs)
 
-lmPrecip <- lm(weekPeak ~ n.Rainless, data=leafTrapTotal)
-summary(lmPrecip)
-anova(lmPrecip)
+lmRainless <- lm(weekPeak ~ n.Rainless, data=leafTrapTotal)
+summary(lmRainless)
+anova(lmRainless)
 
 library(nlme);  # Does the mixed effects model
 library(emmeans) # will et us do a multi-comparisons test
