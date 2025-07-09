@@ -282,6 +282,11 @@ lmeYrs <- lme(weekPeak ~ as.factor(year), random=list(plot=~1, trap_ID=~1), data
 summary(lmeYrs)
 anova(lmeYrs)
 
+yrsComp <- emmeans(lmeYrs, ~year)
+pairs(yrsComp, adjust="tukey")
+
+
+
 lmeRainless <- lme(weekPeak ~ n.Rainless, random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
 summary(lmeRainless)
 anova(lmeRainless)
@@ -311,11 +316,8 @@ lmeYrs2021 <- lme(weekPeak ~ relevel(as.factor(year), "2021"), random=list(plot=
 summary(lmeYrs2021)
 anova(lmeYrs2021)
 
-yrsComp <- emmeans(lmeYrs, ~year)
-pairs(yrsComp, adjust="tukey")
-
 # Aggregating Leaves to the species level
-aggLeafSpp <- aggregate(mass_g ~ year + week + plot + trap_ID + genus + species, data=datLitter[datLitter$tissue=="leaf",], FUN=sum)
+aggLeafSpp <- aggregate(cbind(mass_g, mass_g_day) ~ year + week + plot + trap_ID + genus + species, data=datLitter[datLitter$tissue=="leaf",], FUN=sum)
 aggLeafSpp$sci_name <- as.factor(paste(aggLeafSpp$genus, aggLeafSpp$species))
 summary(aggLeafSpp)
 
@@ -323,7 +325,7 @@ summary(aggLeafSpp)
 ggplot(data=aggLeafSpp[aggLeafSpp$genus %in% c("Quercus", "Acer") & aggLeafSpp$species %in% c("alba", "rubra", "saccharum"),]) +
   facet_grid(year~sci_name) +
   # facet_wrap(~tissue, scales="free_y") +
-  geom_boxplot(aes(x=as.factor(week), y=mass_g)) +
+  geom_boxplot(aes(x=as.factor(week), y=mass_g_day)) +
   # stat_summary(geom="line", aes(x=week, y=mass_g), fun="mean") +
   labs(x="week", y="mass (g)") +
   scale_fill_manual(values=ewPlotColors) +
