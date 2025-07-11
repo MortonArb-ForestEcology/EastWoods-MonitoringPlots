@@ -1,0 +1,389 @@
+---
+title: "08_Leaflitter_species"
+author: "Cierra Lizer"
+date: "2025-07-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(ggpubr)
+library(lubridate)
+library(dplyr)
+library(readxl)
+library(stringr)
+library(readr)
+library(nlme);  # Does the mixed effects model
+library(emmeans) # will et us do a multi-comparisons test
+```
+
+```{r}
+theme_base <-   theme(panel.grid.major = element_blank(),
+                      panel.grid.minor = element_blank(),
+                      panel.border = element_rect(fill="white", colour = "black", linewidth=0.7),
+                      axis.title.x = element_text(margin = margin(t = 10, b=5), size=14),
+                      axis.title.y = element_text(margin = margin(l = 5, r=5), size=14),
+                      axis.text.x= element_text(margin = margin(t = 10), size=12),
+                      axis.text.y=element_text(margin = margin(r = 10), size=12),
+                      axis.ticks.length=unit(-0.3, "cm"),
+                      # axis.ticks.margin=unit(0.5, "cm"),
+                      axis.ticks = element_line(colour = "black", linewidth = 0.4))
+
+
+# Setting a consistent color scheme across all graphs
+plotOrder <- c("B-127", "U-134", "N-115", "HH-115")
+ewPlotColors <- c("#1B9E77","#D95F02", "#7570B3", "#E7298A")
+names(ewPlotColors) = plotOrder
+ewPlotColors
+```
+
+```{r}
+path.google <- "~/Google Drive/My Drive"
+path.litter <- file.path(path.google, "East Woods/Rollinson_Monitoring/Data/Leaf_litter_data")
+path.CN <- file.path(path.google, "East Woods/Rollinson_Monitoring/Data/Leaf_litter_data/CN_runs")
+path.figs <- file.path(path.litter, "figures") # where we shoudl save some figures
+path.save <- file.path(path.litter, "LeafLitterData_Clean_forArchiving") # Where we shoudl save the data
+cierra.path <- "G:/.shortcut-targets-by-id/0B_Fbr697pd36TkVHdDNJQ1dJU1E/East Woods/Rollinson_Monitoring/Data/Leaf_litter_data/CN_Runs"
+```
+
+___________________________________________________________________________________________________________________________________________
+
+*Cleaning Leaf litter*
+
+```{r}
+#combine into one dataset
+all_cleaned_files <- list.files(path.save, pattern = "\\.csv$", full.names = TRUE)
+if (length(all_cleaned_files) == 0) { stop(...) }
+datLitter <- map_df(all_cleaned_files, read_csv)
+datLitter$plot <- factor(datLitter$plot, levels = plotOrder)
+summary(datLitter)
+
+datLitter$year <- lubridate::year(datLitter$date_collection)
+datLitter$yday <- lubridate::yday(datLitter$date_collection)
+datLitter$week <- lubridate::week(datLitter$date_collection)
+summary(datLitter)
+
+datLitter <- datLitter[datLitter$year<2024,]
+summary(datLitter)
+```
+
+Cleaning of missing and empty's
+```{r}
+# There is no HH-115 NE, NW, SE, SW --> it has a weird layout
+datLitter[datLitter$plot=="HH-115" & datLitter$trap_ID %in% c("NE", "NW", "SE", "SW"), "trap_ID"] <- NA
+
+datLitter <- datLitter[!is.na(datLitter$trap_ID),]
+
+# Finding bags that that are empty or missing
+unique(datLitter$tissue)
+
+datMissing <- datLitter[datLitter$tissue == "MISSING DATA",]
+dim(datMissing)
+summary(datMissing)
+
+datNone <- datLitter[datLitter$tissue == "EMPTY BAG",]
+dim(datNone)
+summary(datNone)
+```
+
+Summing to the trap level --> good to use for comparisons of plots and forest wide things
+```{r}
+aggLeafTrap <- aggregate(mass_g ~ year + week + date_collection + plot + trap_ID, data=datLitter[datLitter$tissue=="leaf",], FUN=sum)
+summary(aggLeafTrap)
+
+aggLeafTrap <- rbind(aggLeafTrap, datNone[,c("year", "week", "date_collection", "plot", "trap_ID", "mass_g")], datMissing[,c("year", "week", "date_collection", "plot", "trap_ID", "mass_g")])
+summary(aggLeafTrap)
+```
+
+```{r}
+allCollect = NULL
+# plotsCore <- c("N", "S", "E", "W")
+# plotExtra <- c("NW", "SW", "NE", "SE")
+for(PLT in unique(aggLeafTrap$plot)){
+  datPLT <- aggLeafTrap[aggLeafTrap$plot==PLT,]
+  datPLT <- droplevels(datPLT)
+  
+  datePLT <- unique(datPLT$date_collection)
+  datePLT <- sort(datePLT)
+  daysPLT <- diff(datePLT)
+  # Making a data frame with all collections dates and traps for the plot
+  # That way we can add in plots as missing if they're not there
+  dfCollection <- data.frame(plot=PLT, trap_ID = rep(unique(datPLT$trap_ID), each=length(datePLT)),
+                             date_collection=datePLT, days_collection=c(NA, daysPLT))
+                            
+  
+  if(is.null(allCollect)){
+    allCollect <- dfCollection
+  } else {
+    allCollect <- rbind(allCollect, dfCollection)
+  }
+}
+summary(allCollect)
+```
+
+```{r}
+# Aggregating Leaves to the species level
+aggLeafSpp <- aggregate(cbind(mass_g) ~ year + week + plot + trap_ID + genus + species, data=datLitter[datLitter$tissue=="leaf",], FUN=sum)
+aggLeafSpp$sci_name <- as.factor(paste(aggLeafSpp$genus, aggLeafSpp$species))
+summary(aggLeafSpp)
+
+aggLeafSppTot <- aggregate(mass_g ~ year + plot + trap_ID + genus + species, data=datLitter[datLitter$tissue=="leaf",], FUN=sum, na.rm=T)
+aggLeafSppTot$sci_name <- as.factor(paste(aggLeafSppTot$genus, aggLeafSppTot$species))
+summary(aggLeafSppTot)
+```
+
+___________________________________________________________________________________________________________________________________________
+
+*Looking at just LL dat*
+```{r}
+ggplot(data=aggLeafSppTot[aggLeafSppTot$sci_name %in% c("Acer saccharum", "Quercus alba", "Quercus rubra") & aggLeafSppTot$year < 2023,]) +
+  facet_wrap(~sci_name, ncol=2) +
+  geom_point(aes(x=as.factor(year), y=weekPeak, color=plot), position=position_jitter(0.1)) +
+  geom_boxplot(aes(x=as.factor(year), y=weekPeak)) 
+```
+
+```{r}
+lmeYrsSpp <- lme(weekPeak ~ as.factor(year)*sci_name, random=list(plot=~1, trap_ID=~1), data=aggLeafSppTot[aggLeafSppTot$sci_name %in% c("Acer saccharum", "Quercus alba", "Quercus rubra"),])
+summary(lmeYrsSpp)
+anova(lmeYrsSpp)
+
+
+lmeYrsQURU <- lme(weekPeak ~ as.factor(year), random=list(plot=~1, trap_ID=~1), data=aggLeafSppTot[aggLeafSppTot$sci_name %in% c("Quercus rubra"),])
+summary(lmeYrsQURU)
+anova(lmeYrsQURU)
+
+quruComp <- emmeans(lmeYrsQURU, ~year)
+pairs(quruComp, adjust="tukey")
+
+
+lmeYrsQUAL <- lme(weekPeak ~ as.factor(year), random=list(plot=~1, trap_ID=~1), data=aggLeafSppTot[aggLeafSppTot$sci_name %in% c("Quercus alba"),])
+summary(lmeYrsQUAL)
+anova(lmeYrsQUAL)
+
+qualComp <- emmeans(lmeYrsQUAL, ~year)
+pairs(qualComp, adjust="tukey")
+
+
+lmeYrsACSA <- lme(weekPeak ~ as.factor(year), random=list(plot=~1, trap_ID=~1), data=aggLeafSppTot[aggLeafSppTot$sci_name %in% c("Acer saccharum"),])
+summary(lmeYrsACSA)
+anova(lmeYrsACSA)
+
+acsaComp <- emmeans(lmeYrsACSA, ~year)
+pairs(acsaComp, adjust="tukey")
+```
+
+___________________________________________________________________________________________________________________________________________
+
+*LL & Met*
+
+___________________________________________________________________________________________________________________________________________
+
+*Cleaning N data*
+Loading in data from 2021-22
+```{r}
+LLN2122path<-list.files(cierra.path, pattern = "Lizer_EWLL_2021-2022_run.xlsx", full.names = TRUE)
+LLN2122 <- read_excel(LLN2122path)
+head(LLN2122)
+```
+
+Name (aka sample id) will be composed of plot (first 4-5 characters), underscore, date (next 8 characters), underscore, species id (last 4 characters). Date is in the form year (4 characters), month (2 characters), day (2 characters)
+
+Loading in 2018 data
+```{r}
+LLN18path<-list.files(cierra.path, pattern = "Fall_2018_run1.csv", full.names = TRUE)
+LLN18 <- read_csv(LLN18path)
+head(LLN18)
+```
+Name is composed of plot (1st character), dash, year (2 characters), month (2 character), day (2 characters), species id (2 characters)
+
+Rename columns to be easier to read and pull information out from the name
+```{r}
+LLN2122_clean <- LLN2122 %>%
+  rename(
+    CN_ratio = `C/N  ratio`,
+    N_percent = `N  [%]`,
+    C_percent = `C  [%]`
+  ) %>%
+  
+  mutate(
+    spec_id = str_sub(Name, -4), # Get the last 4 characters
+    date_raw = str_sub(Name, -13, -5), #finds the 8 characters before the last underscore (5th to last character)
+    #note: will give year, month, day in a string together
+    plot = str_extract(Name, "^[^_]+") # Extracts characters from start (^) until the first underscore (_)
+  ) %>%
+#convert date_raw into a readable year format
+  mutate(
+    date = ymd(date_raw),
+    year = year(date),
+    week = isoweek(date)
+  ) %>%
+  mutate(year = factor(year)) %>%
+  select(
+    Name, plot, date, year, week, spec_id, everything(), -date_raw # Keep original, then new columns, then rest
+  )
+
+print(LLN2122_clean)
+```
+
+A BUNCH of cleaning 2018 and making the formats similar to what I had done
+```{r}
+LLN18_clean <- LLN18 %>%
+  rename(
+    CN_ratio = `C:N`,
+    N_percent = `%N`,
+    C_percent = `%C`
+  ) %>%
+  mutate(
+    spec_id_raw = str_sub(Name, 11,12),
+    year_2dig = str_sub(Name, 3, 4),
+    month_2dig = str_sub(Name, 6,7),
+    day_2dig = str_sub(Name, 9,10),
+    plot_raw = str_sub(Name, 1,1)
+  ) %>%
+  mutate(
+    spec_id = case_when(
+      spec_id_raw == "QA" ~ "QUAL",
+      spec_id_raw == "TA" ~ "TIAM",
+      spec_id_raw == "AS" ~ "ACSA",
+      TRUE ~ spec_id_raw
+    ), 
+    plot = case_when(
+      plot_raw == "H" ~ "HH115",
+      plot_raw == "N" ~ "N115",
+      plot_raw == "U" ~ "U134",
+      plot_raw == "B" ~ "B127",
+      TRUE ~ plot_raw
+    )
+  ) %>% 
+  mutate(
+    date_raw = paste0("20", year_2dig, month_2dig, day_2dig)
+  ) %>%
+  # convert date_raw into a readable year format
+  mutate(
+    date = ymd(date_raw),
+    year = year(date),
+    week = isoweek(date)
+  ) %>%
+  mutate(year = factor(year)) %>%
+  select(
+    Name, plot, date, year, week, spec_id, CN_ratio, N_percent, C_percent, everything(),
+    -year_2dig, -month_2dig, -day_2dig, -date_raw, -plot_raw, -spec_id_raw
+  )
+
+print(LLN18_clean)
+unique(LLN18_clean$spec_id)
+unique(LLN18_clean$plot)
+```
+
+AGGGGHHH I accidentally put QUAB and QUAL both meaning Quercus alba
+```{r}
+LLN2122_clean <- LLN2122_clean %>%
+  mutate(
+    spec_id = case_when(
+    spec_id == "QUAB" ~ "QUAL", # If spec_id is "QUAB", change it to "QUAL"
+    TRUE ~ spec_id
+  )
+  )
+
+
+LLN2122_clean <- LLN2122_clean %>%
+  mutate(
+    plot = case_when(
+    plot == "H115" ~ "HH115",
+    TRUE ~ plot
+    )
+  )
+
+unique(LLN2122_clean$spec_id)
+unique(LLN2122_clean$plot)
+```
+
+Combining my 2 dataframes
+```{r}
+LLNdattot <- bind_rows(LLN2122_clean, LLN18_clean)
+
+dim(LLNdattot)
+unique(LLNdattot$year)
+```
+
+Removing Tilia Americana from the dataset
+```{r}
+LLN_spec <- LLNdattot %>%
+  filter(spec_id != "TIAM")
+
+unique(LLN_spec$spec_id)
+dim(LLN_spec)
+```
+
+```{r}
+LLN_spec <- LLN_spec %>%
+  mutate(
+    sci_name = case_when(
+    spec_id == "QUAL" ~ "Quercus alba", 
+    TRUE ~ sci_name
+  )
+  )
+LLN_spec <- LLN_spec %>%
+  mutate(
+    sci_name = case_when(
+    spec_id == "QURU" ~ "Quercus rubra", 
+    TRUE ~ sci_name
+  )
+  )
+LLN_spec <- LLN_spec %>%
+  mutate(
+    sci_name = case_when(
+    spec_id == "ACSA" ~ "Acer Saccharum", 
+    TRUE ~ sci_name
+  )
+  )
+```
+
+___________________________________________________________________________________________________________________________________________
+
+*Looking at just N*
+```{r}
+ggplot(data = LLN_spec, aes(x = week, y = N_percent, color = spec_id)) + 
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "loess", se = FALSE) +
+  labs(x = "Week", y = "C/N Ratio", color = "Species") +
+  theme_minimal()
+
+ggplot(data = LLN_spec, aes(x = week, y = N_percent, color = as.factor(year))) +
+   facet_grid(~spec_id) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "loess", se = FALSE) +
+  labs(x = "Week", y = "N_percent", color = "Year") +
+  theme_minimal()
+```
+
+```{r}
+lmeNyear <- lme(N_percent ~ as.factor(year), random=list(spec_id=~1, plot=~1, week=~1), data=LLN_spec)
+summary(lmeNyear)
+anova(lmeNyear)
+```
+__________________________________________________________________________________________________________________________________________
+
+*N and Met data*
+
+```{r}
+NMet <- merge(LLN_spec, metSummer, all.x=T)
+summary(NMet)
+```
+
+```{r}
+ggplot(data = NMet, aes(x = n.Rainless, y = N_percent, color = sci_name)) + 
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "loess", se = FALSE) +
+  labs(x = "Number of Rainless Days", y = "%N", color = "Species") +
+  theme_minimal()
+```
+
+___________________________________________________________________________________________________________________________________________
+
+*N and LL data*

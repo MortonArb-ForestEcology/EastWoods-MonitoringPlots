@@ -1,0 +1,238 @@
+---
+title: "06_Leaflitter_daymet"
+author: "Cierra Lizer"
+date: "2025-07-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(ggpubr)
+library(lubridate)
+library(dplyr)
+library(readxl)
+library(stringr)
+library(readr)
+```
+
+
+
+```{r}
+metSummer <- read.csv("G:/.shortcut-targets-by-id/1q2wvODXrDo0tgOTLpFqF7TqcWoKoHZjW/URF REU 2025 - Lizer - Leaf Litter/data/daymet/daymet_June-July-August_summaries_2017-2023.csv")
+```
+
+```{r}
+summary(metSummer)
+```
+
+should use leafTrapTotal instead
+
+```{r}
+lmeYrs <- lme(weekPeak ~ as.factor(year), random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
+summary(lmeYrs)
+anova(lmeYrs)
+
+lmeRainless <- lme(weekPeak ~ n.Rainless, random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
+summary(lmeRainless)
+anova(lmeRainless)
+
+lmeRainlessConsec <- lme(weekPeak ~ RainlessConsec.max , random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
+summary(lmeRainlessConsec)
+anova(lmeRainlessConsec)
+
+lmePrcp <- lme(weekPeak ~ prcp..mm.day., random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
+summary(lmePrcp)
+anova(lmePrcp)
+
+lmeTmax <- lme(weekPeak ~ tmax..deg.c., random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
+summary(lmeTmax)
+anova(lmeTmax)
+
+lmeVP <- lme(weekPeak ~ vp..Pa., random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
+summary(lmeVP)
+anova(lmeVP)
+```
+
+```{r}
+ggplot(data = leafTrapTotal, aes(x = n.Rainless, y = weekPeak)) + 
+  geom_point(aes(color=plot), alpha = 0.7) +
+  geom_smooth(method = "loess", se = FALSE, color = "black", linewidth = 0.75) +
+  labs(x = "Number of Rainless Days", y = "Week of Peak Senescence") + 
+  geom_label(
+    label="Wet & Early", 
+    x=55,
+    y=42,
+    label.padding = unit(0.35, "lines"), 
+    label.size = 0.35,
+    color = "darkgrey",
+    fill="white"
+  )+
+   geom_label(
+    label="Wet & Late", 
+    x=56,
+    y=48,
+    label.padding = unit(0.35, "lines"), 
+    label.size = 0.35,
+    color = "darkgrey",
+    fill="white"
+  )+
+    geom_label(
+    label="Dry & Early", 
+    x=70,
+    y=42,
+    label.padding = unit(0.35, "lines"), 
+    label.size = 0.35,
+    color = "darkgrey",
+    fill="white"
+  )+
+  geom_label(
+    label="Dry & Late", 
+    x=70,
+    y=48,
+    label.padding = unit(0.35, "lines"), 
+    label.size = 0.35,
+    color = "darkgrey",
+    fill="white"
+  )+  
+  theme_bw() +
+  theme(legend.position = "right")
+```
+```{r}
+ggplot(data = leafTrapTotal, aes(x = n.Rainless, y = weekPeak)) + 
+  geom_point(aes(color=plot), alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE, color = "black", linewidth=0.75) +
+  labs(x = "Number of Rainless Days", y = "Week of Peak Senescence") +
+  geom_label(
+    label="Wet & Early", 
+    x=55,
+    y=42,
+    label.padding = unit(0.35, "lines"), 
+    label.size = 0.35,
+    color = "darkgrey",
+    fill="white"
+  )+
+   geom_label(
+    label="Wet & Late", 
+    x=56,
+    y=48,
+    label.padding = unit(0.35, "lines"), 
+    label.size = 0.35,
+    color = "darkgrey",
+    fill="white"
+  )+
+    geom_label(
+    label="Dry & Early", 
+    x=70,
+    y=42,
+    label.padding = unit(0.35, "lines"), 
+    label.size = 0.35,
+    color = "darkgrey",
+    fill="white"
+  )+
+  geom_label(
+    label="Dry & Late", 
+    x=70,
+    y=48,
+    label.padding = unit(0.35, "lines"), 
+    label.size = 0.35,
+    color = "darkgrey",
+    fill="white"
+  )+  
+  theme_bw() +
+  theme(legend.position = "right")
+```
+```{r}
+ggplot(data = aggLeafSppTot, aes(x = n.Rainless, y = weekPeak, color=sci_name)) + 
+  geom_point(aes(color=plot), alpha = 0.7) +
+  geom_smooth(method = "loess", se = FALSE, linewidth=0.75) +
+  labs(x = "Number of Rainless Days", y = "Week of Peak Senescence") +
+  geom_label(
+    label="Wet & Early", 
+    x=55,
+    y=42,
+    label.padding = unit(0.35, "lines"), 
+    label.size = 0.35,
+    color = "darkgrey",
+    fill="white"
+  )+
+   geom_label(
+    label="Wet & Late", 
+    x=56,
+    y=48,
+    label.padding = unit(0.35, "lines"), 
+    label.size = 0.35,
+    color = "darkgrey",
+    fill="white"
+  )+
+    geom_label(
+    label="Dry & Early", 
+    x=70,
+    y=42,
+    label.padding = unit(0.35, "lines"), 
+    label.size = 0.35,
+    color = "darkgrey",
+    fill="white"
+  )+
+  geom_label(
+    label="Dry & Late", 
+    x=70,
+    y=48,
+    label.padding = unit(0.35, "lines"), 
+    label.size = 0.35,
+    color = "darkgrey",
+    fill="white"
+  )+  
+  theme_bw() +
+  theme(legend.position = "right")
+```
+
+```{r}
+ggplot(data = leafTrapTotal, aes(x = n.Rainless, y = weekPeak, color=plot)) + 
+  geom_point( alpha = 0.7) +
+  geom_smooth() +
+  labs(x = "Number of Rainless Days", y = "Week of Peak Senescence") + 
+  geom_label(
+    label="Wet & Early", 
+    x=55,
+    y=42,
+    label.padding = unit(0.35, "lines"), 
+    label.size = 0.35,
+    color = "darkgrey",
+    fill="white"
+  )+
+   geom_label(
+    label="Wet & Late", 
+    x=56,
+    y=48,
+    label.padding = unit(0.35, "lines"), 
+    label.size = 0.35,
+    color = "darkgrey",
+    fill="white"
+  )+
+    geom_label(
+    label="Dry & Early", 
+    x=70,
+    y=42,
+    label.padding = unit(0.35, "lines"), 
+    label.size = 0.35,
+    color = "darkgrey",
+    fill="white"
+  )+
+  geom_label(
+    label="Dry & Late", 
+    x=70,
+    y=48,
+    label.padding = unit(0.35, "lines"), 
+    label.size = 0.35,
+    color = "darkgrey",
+    fill="white"
+  )+  
+  theme_bw() +
+  theme(legend.position = "right")
+```
+

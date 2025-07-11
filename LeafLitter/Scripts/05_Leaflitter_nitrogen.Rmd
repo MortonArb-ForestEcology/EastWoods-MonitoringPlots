@@ -192,24 +192,30 @@ LLN_spec <- LLNdattot %>%
 unique(LLN_spec$spec_id)
 dim(LLN_spec)
 ```
+```{r}
+write.csv(LLN_spec, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter ", "CNcombined.csv"), row.names=F)
+```
 
 
 
 Yearly Differences
 ```{r}
-ggplot(data = LLN_spec, aes(x = week, y = N_percent, color = as.factor(year))) + 
+ggplot(data = LLN_spec, aes(x = week, y = N_percent, color = as.factor(year))) +
+   facet_grid(~spec_id) +
   geom_point(alpha = 0.7) +
   geom_smooth(method = "loess", se = FALSE) +
-  labs(x = "Week", y = "C/N Ratio", color = "Year") +
+  labs(x = "Week", y = "N_percent", color = "Year") +
   theme_minimal()
 ```
 
 Plot
 ```{r}
 ggplot(data = LLN_spec, aes(x = week, y = N_percent, color = plot)) + 
+     facet_grid(~spec_id) +
   geom_point(alpha = 0.7) +
   geom_smooth(method = "loess", se = FALSE) +
   labs(x = "Week", y = "C/N Ratio", color = "plot") +
+  scale_color_manual(values=ewPlotColors) +
   theme_minimal()
 ```
 
@@ -221,3 +227,18 @@ ggplot(data = LLN_spec, aes(x = week, y = N_percent, color = spec_id)) +
   labs(x = "Week", y = "C/N Ratio", color = "Species") +
   theme_minimal()
 ```
+
+
+```{r}
+lmeNyear <- lme(N_percent ~ as.factor(year), random=list(spec_id=~1, plot=~1, week=~1), data=LLN_spec)
+summary(lmeNyear)
+anova(lmeNyear)
+```
+
+```{r}
+mean__by_year_species <- aggLeafSppTot %>%
+  group_by(year, sci_name) %>%
+  summarize(mean_weekPeak = mean(weekPeak, na.rm = TRUE))
+print(mean_wkpk_by_year_species)
+```
+
