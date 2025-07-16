@@ -2,12 +2,15 @@
 
 library(ggplot2)
 library(tidyverse)
+library(nlme);  # Does the mixed effects model
+library(emmeans) # will et us do a multi-comparisons test
+
 
 # Set up file paths etc. --> this should also indicate where you can find these files!
 path.google <- "~/Google Drive/My Drive"
 path.litter <- file.path(path.google, "East Woods/Rollinson_Monitoring/Data/Leaf_litter_data")
 path.figs <- file.path(path.litter, "figures") # where we shoudl save some figures
-path.save <- file.path(path.litter, "LeafLitterData_Clean_forArchiving") # Where we shoudl save the data
+path.save <- file.path(path.litter, "LeafLitterData_Clean_forArchiving") # Where we should save the data
 
 
 # Using a formatting theme consistent with what Meghan has done
@@ -260,11 +263,8 @@ ggplot(data=leafTrapTotal) +
 
 ggplot(data=leafTrapTotal) +
   # geom_boxplot(aes(x=as.factor(year), y=weekPeak)) +
-  geom_point(aes(x=n.Rainless, y=weekPeak, color=plot))
-
-ggplot(data=leafTrapTotal) +
-  # geom_boxplot(aes(x=as.factor(year), y=weekPeak)) +
-  geom_point(aes(x=prcp..mm.day., y=weekPeak, color=plot))
+  geom_point(aes(x=prcp..mm.day., y=weekPeak, color=plot)) +
+  stat_smooth(aes(x=prcp..mm.day., y=weekPeak), method="lm")
 
 lmYrs <- lm(weekPeak ~ as.factor(year), data=leafTrapTotal)
 summary(lmYrs)
@@ -274,9 +274,6 @@ lmRainless <- lm(weekPeak ~ n.Rainless, data=leafTrapTotal)
 summary(lmRainless)
 anova(lmRainless)
 
-library(nlme);  # Does the mixed effects model
-library(emmeans) # will et us do a multi-comparisons test
-
 
 lmeYrs <- lme(weekPeak ~ as.factor(year), random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
 summary(lmeYrs)
@@ -285,32 +282,77 @@ anova(lmeYrs)
 yrsComp <- emmeans(lmeYrs, ~year)
 pairs(yrsComp, adjust="tukey")
 
+lmeYrsInt <- lme(weekPeak ~ as.factor(year)-1, random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
+summary(lmeYrsInt)
+
+mean(leafTrapTotal$weekPeak[leafTrapTotal$year==2021])
+mean(leafTrapTotal$weekPeak[leafTrapTotal$year==2018])
+mean(leafTrapTotal$weekPeak[leafTrapTotal$year==2022])
+
+ggplot(data=leafTrapTotal) +
+  # geom_boxplot(aes(x=as.factor(year), y=weekPeak)) +
+  geom_point(aes(x=n.Rainless, y=weekPeak, color=plot)) +
+  stat_smooth(aes(x=n.Rainless, y=weekPeak), method="lm")
 
 
 lmeRainless <- lme(weekPeak ~ n.Rainless, random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
 summary(lmeRainless)
 anova(lmeRainless)
 
+mean(leafTrapTotal$n.Rainless[leafTrapTotal$year==2021])
+mean(leafTrapTotal$n.Rainless[leafTrapTotal$year==2018])
+mean(leafTrapTotal$n.Rainless[leafTrapTotal$year==2022])
+
+
 lmeRainlessConsec <- lme(weekPeak ~ RainlessConsec.max , random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
 summary(lmeRainlessConsec)
 anova(lmeRainlessConsec)
+
+mean(leafTrapTotal$RainlessConsec.max[leafTrapTotal$year==2021])
+mean(leafTrapTotal$RainlessConsec.max[leafTrapTotal$year==2018])
+mean(leafTrapTotal$RainlessConsec.max[leafTrapTotal$year==2022])
+
+ggplot(data=leafTrapTotal) +
+  # geom_boxplot(aes(x=as.factor(year), y=weekPeak)) +
+  geom_point(aes(x=RainlessConsec.max, y=weekPeak, color=plot)) +
+  stat_smooth(aes(x=RainlessConsec.max, y=weekPeak), method="lm")
+
 
 lmePrcp <- lme(weekPeak ~ prcp..mm.day., random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
 summary(lmePrcp)
 anova(lmePrcp)
 
+ggplot(data=leafTrapTotal) +
+  # geom_boxplot(aes(x=as.factor(year), y=weekPeak)) +
+  geom_point(aes(x=tmax..deg.c., y=weekPeak, color=plot)) +
+  stat_smooth(aes(x=tmax..deg.c., y=weekPeak), method="lm")
+
+
 lmeTmax <- lme(weekPeak ~ tmax..deg.c., random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
 summary(lmeTmax)
 anova(lmeTmax)
+
+mean(leafTrapTotal$tmax..deg.c.[leafTrapTotal$year==2021])
+mean(leafTrapTotal$tmax..deg.c.[leafTrapTotal$year==2018])
+mean(leafTrapTotal$tmax..deg.c.[leafTrapTotal$year==2022])
+
 
 lmeTmaxRainless <- lme(weekPeak ~ RainlessConsec.Tmax.mean , random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
 summary(lmeTmaxRainless)
 anova(lmeTmaxRainless)
 
+ggplot(data=leafTrapTotal) +
+  # geom_boxplot(aes(x=as.factor(year), y=weekPeak)) +
+  geom_point(aes(x=vp..Pa., y=weekPeak, color=plot)) +
+  stat_smooth(aes(x=vp..Pa., y=weekPeak), method="lm")
+
 lmeVP <- lme(weekPeak ~ vp..Pa., random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
 summary(lmeVP)
 anova(lmeVP)
 
+mean(leafTrapTotal$vp..Pa.[leafTrapTotal$year==2021])
+mean(leafTrapTotal$vp..Pa.[leafTrapTotal$year==2018])
+mean(leafTrapTotal$vp..Pa.[leafTrapTotal$year==2022])
 
 lmeYrs2021 <- lme(weekPeak ~ relevel(as.factor(year), "2021"), random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
 summary(lmeYrs2021)
