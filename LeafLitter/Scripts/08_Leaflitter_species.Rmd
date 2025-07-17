@@ -58,7 +58,7 @@ ________________________________________________________________________________
 ```{r}
 #combine into one dataset
 all_cleaned_files <- list.files(path.save, pattern = "\\.csv$", full.names = TRUE)
-if (length(all_cleaned_files) == 0) { stop(...) }
+if (length(all_cleaned_files) == 0) { stop("No cleaned leaf litter files found in path.save.") }
 datLitter <- map_df(all_cleaned_files, read_csv)
 datLitter$plot <- factor(datLitter$plot, levels = plotOrder)
 summary(datLitter)
@@ -75,7 +75,7 @@ summary(datLitter)
 Cleaning of missing and empty's
 ```{r}
 # There is no HH-115 NE, NW, SE, SW --> it has a weird layout
-datLitter[datLitter$plot=="HH-115" & datLitter$trap_ID %in% c("NE", "NW", "SE", "SW"), "trap_ID"] <- NA
+#datLitter[datLitter$plot=="HH-115" & datLitter$trap_ID %in% c("NE", "NW", "SE", "SW"), "trap_ID"] <- NA
 
 datLitter <- datLitter[!is.na(datLitter$trap_ID),]
 
@@ -91,50 +91,82 @@ dim(datNone)
 summary(datNone)
 ```
 
-Summing to the trap level --> good to use for comparisons of plots and forest wide things
+Combining species and trap
 ```{r}
-aggLeafTrap <- aggregate(mass_g ~ year + week + date_collection + plot + trap_ID, data=datLitter[datLitter$tissue=="leaf",], FUN=sum)
-summary(aggLeafTrap)
-
-aggLeafTrap <- rbind(aggLeafTrap, datNone[,c("year", "week", "date_collection", "plot", "trap_ID", "mass_g")], datMissing[,c("year", "week", "date_collection", "plot", "trap_ID", "mass_g")])
-summary(aggLeafTrap)
+spectrp <- bind_rows(
+  datLitter %>%
+    filter(tissue == "leaf") %>%
+    select(year, week, date_collection, plot, trap_ID, mass_g, genus, species),
+  datNone %>%
+    select(year, week, date_collection, plot, trap_ID, mass_g, genus, species),
+  datMissing %>%
+    select(year, week, date_collection, plot, trap_ID, mass_g, genus, species)
+) %>%
+  mutate(sci_name = paste(genus, species)) %>%
+  group_by(year, week, date_collection, plot, trap_ID) %>%
+  mutate(mass_g_trap_total = sum(mass_g, na.rm = TRUE)) %>%
+  ungroup()
 ```
 
+**PROBLEM IN THIS CHUNK**
+Error in data.frame(plot = PLTsp, trap_ID = rep(unique(datPLTsp$trap_ID),  : 
+  arguments imply differing number of rows: 1, 0
 ```{r}
-allCollect = NULL
-# plotsCore <- c("N", "S", "E", "W")
-# plotExtra <- c("NW", "SW", "NE", "SE")
-for(PLT in unique(aggLeafTrap$plot)){
-  datPLT <- aggLeafTrap[aggLeafTrap$plot==PLT,]
-  datPLT <- droplevels(datPLT)
+allCollectSp = NULL
+for(PLTsp in unique(spectrp$plot)){ 
+  datPLTsp <- spectrp[spectrp$plot==PLTsp,]
+  datPLTsp <- droplevels(datPLTsp)
   
-  datePLT <- unique(datPLT$date_collection)
-  datePLT <- sort(datePLT)
-  daysPLT <- diff(datePLT)
-  # Making a data frame with all collections dates and traps for the plot
-  # That way we can add in plots as missing if they're not there
-  dfCollection <- data.frame(plot=PLT, trap_ID = rep(unique(datPLT$trap_ID), each=length(datePLT)),
-                             date_collection=datePLT, days_collection=c(NA, daysPLT))
-                            
+  datePLTsp <- unique(datPLTsp$date_collection)
+  datePLTsp <- sort(datePLTsp)
+  daysPLTsp <- diff(datePLTsp)
   
-  if(is.null(allCollect)){
-    allCollect <- dfCollection
+  dfCollectionsp <- data.frame(plot=PLTsp, trap_ID = rep(unique(datPLTsp$trap_ID), each=length(datePLTsp)),
+                             date_collection=datePLTsp, days_collection=c(NA, daysPLTsp))
+  
+  if(is.null(allCollectSp)){
+    allCollectSp <- dfCollectionsp
   } else {
-    allCollect <- rbind(allCollect, dfCollection)
+    allCollectSp <- rbind(allCollectSp, dfCollectionsp)
   }
 }
-summary(allCollect)
+summary(allCollectSp)
+
+#creating equivalent of aggleaftrap
+datLitter_sptp <- merge(spectrp, allCollectSp, all=T)
+datLitter_sptp$year <- lubridate::year(datLitter_sptp$date_collection)
+datLitter_sptp$week <- lubridate::week(datLitter_sptp$date_collection)
+
+# 6. Filter out pre-deployment NA rows
+for(PLTsp in unique(datLitter_sptp$plot)){
+  for(TRPsp in unique(datLitter_sptp$trap_ID[datLitter_sptp$plot==PLTsp])){
+    minTrapsp <- min(datLitter_sptp$date_collection[datLitter_sptp$plot==PLTsp & datLitter_sptp$trap_ID==TRPsp & !is.na(datLitter_sptp$mass_g)] ,na.rm=T)
+    datLitter_sptp <- datLitter_sptp[datLitter_sptp$plot!=PLTsp | (datLitter_sptp$plot==PLTsp & datLitter_sptp$trap_ID!=TRPsp) | 
+                                               (datLitter_sptp$plot==PLTsp & datLitter_sptp$trap_ID==TRPsp & datLitter_sptp$date_collection >= minTrapsp),]
+  }
+
 ```
 
-```{r}
-# Aggregating Leaves to the species level
-aggLeafSpp <- aggregate(cbind(mass_g) ~ year + week + plot + trap_ID + genus + species, data=datLitter[datLitter$tissue=="leaf",], FUN=sum)
-aggLeafSpp$sci_name <- as.factor(paste(aggLeafSpp$genus, aggLeafSpp$species))
-summary(aggLeafSpp)
 
-aggLeafSppTot <- aggregate(mass_g ~ year + plot + trap_ID + genus + species, data=datLitter[datLitter$tissue=="leaf",], FUN=sum, na.rm=T)
-aggLeafSppTot$sci_name <- as.factor(paste(aggLeafSppTot$genus, aggLeafSppTot$species))
-summary(aggLeafSppTot)
+Calculate mass rates and proportions at both species in trap and total trap levels
+```{r}
+datLitter_sptp$mass_g_day_sp <- datLitter_sptp$mass_g / datLitter_sptp$days_collection # Species-specific mass per day
+datLitter_sptp$mass_g_day_trp <- datLitter_sptp$mass_g_trp / datLitter_sptp$days_collection # Total trap mass per day
+```
+
+Calculate proportions of total annual trap mass
+```{r}
+datLitter_sptp <- datLitter_sptp %>%
+  group_by(year, plot, trap_ID) %>%
+  # Calculate total annual mass per trap
+  mutate(totalMass_trap_year = sum(mass_g_trp, na.rm = TRUE)) %>% 
+  ungroup() %>%
+  # Proportion of indv species mass relative to total annual trap mass
+  mutate(mass_prop_spec_in_trap = mass_g / totalMass_trap_year) %>%
+  # Proportion of total trap mass at each collection relative to total annual trap mass
+  mutate(mass_prop_trap_total = mass_g_trp / totalMass_trap_year)
+
+summary(datLitter_sptp)
 ```
 
 ___________________________________________________________________________________________________________________________________________
