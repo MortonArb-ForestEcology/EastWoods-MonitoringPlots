@@ -63,6 +63,7 @@ datLitterWk <- aggregate(mass_g ~ plot + trap_ID + genus + species + tissue + ye
 summary(datLitterWk)
 
 
+unique(paste(datLeafLitter$genus, datLeafLitter$species))[order(unique(paste(datLeafLitter$genus, datLeafLitter$species)))]
 
 png(file.path(path.figs, "LeafMass_bySpp_byWeek_latest.png"), height=6, width=8, units="in", res=220)
 ggplot(data=datLeafLitter[datLeafLitter$tissue=="leaf" & !datLeafLitter$species=="unknown",]) +
@@ -76,7 +77,6 @@ ggplot(data=datLeafLitter[datLeafLitter$tissue=="leaf" & !datLeafLitter$species=
   theme_bw()
 dev.off()
 
-unique(paste(datLeafLitter$genus, datLeafLitter$species))
 
 # datLeafLitter[!is.na(datLeafLitter$genus) & datLeafLitter$genus=="Ulmus" & datLeafLitter$species=="unknown",]
 

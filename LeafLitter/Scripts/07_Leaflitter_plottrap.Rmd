@@ -255,14 +255,14 @@ summary(leafTrapMet)
 
 ```{r}
 lmeYrs <- lme(weekPeak ~ as.factor(year), random=list(plot=~1, trap_ID=~1), data=leafTrapMet)
-summary(lmeYrs)
+summary(lmeYrs)$tTable
 anova(lmeYrs)
 
 lmeLLRainless <- lme(weekPeak ~ n.Rainless, random=list(plot=~1, trap_ID=~1), data=leafTrapMet)
 summary(lmeLLRainless)
 anova(lmeLLRainless)
 
-sumlmeLLRainlessConsec <- lme(weekPeak ~ RainlessConsec.max , random=list(plot=~1, trap_ID=~1), data=leafTrapMet)
+lmeLLRainlessConsec <- lme(weekPeak ~ RainlessConsec.max , random=list(plot=~1, trap_ID=~1), data=leafTrapMet)
 summary(lmeLLRainlessConsec)
 anova(lmeLLRainlessConsec)
 
@@ -322,6 +322,14 @@ LLN18 <- read_csv(LLN18path)
 head(LLN18)
 ```
 Name is composed of plot (1st character), dash, year (2 characters), month (2 character), day (2 characters), species id (2 characters)
+
+Load in Cierra's 2nd run (has some 2018, 2020, and 2021 data)
+```{r}
+LLNrun2path<-list.files(cierra.path, pattern = "Lizer_EWLL_run2_0715_corrected.xlsx", full.names = TRUE)
+LLNrun2 <- read_excel(LLNrun2path)
+head(LLNrun2)
+```
+
 
 Rename columns to be easier to read and pull information out from the name
 ```{r}
@@ -402,6 +410,60 @@ unique(LLN18_clean$spec_id)
 unique(LLN18_clean$plot)
 ```
 
+Cleaning of Run 2
+```{r}
+LLNrun2_select <- LLNrun2 %>%
+  select(Name, Method, `N  [%]`, `C  [%]`, `C/N  ratio`)
+
+LLNrun2_clean <- LLNrun2_select %>%
+  mutate(
+    `N  [%]` = as.numeric(`N  [%]`), 
+    `C  [%]` = as.numeric(`C  [%]`),
+    `C/N  ratio` = as.numeric(`C/N  ratio`)
+  )%>%
+
+#need to take out blanks and standards, some are labeled with different methods, some have values of 0.
+ filter(Method == "Plant") %>%
+ filter(!(`N  [%]` == 0 & `C  [%]` == 0 & `C/N  ratio` == 0)) %>%
+  
+  rename(
+    CN_ratio = `C/N  ratio`,
+    N_percent = `N  [%]`,
+    C_percent = `C  [%]`
+  ) %>%
+  
+  mutate(
+    spec_id = str_sub(Name, -4), # Get the last 4 characters
+    date_raw = str_sub(Name, -13, -5), #finds the 8 characters before the last underscore (5th to last character)
+    #note: will give year, month, day in a string together
+    plot = str_extract(Name, "^[^_]+") # Extracts characters from start (^) until the first underscore (_)
+  ) %>%
+#convert date_raw into a readable year format
+  mutate(
+    date = ymd(date_raw),
+    year = year(date),
+    week = isoweek(date)
+  ) %>%
+  mutate(year = factor(year)) %>%
+  select(
+    Name, plot, date, year, week, spec_id, everything(), -date_raw, -Method # Keep original, then new columns, then rest
+  )
+
+LLNrun2_clean <- LLNrun2_clean %>%
+  mutate(
+    plot = case_when(
+    plot == "H115" ~ "HH115",
+    plot == "HH15" ~ "HH115",
+    TRUE ~ plot
+    )
+  )
+
+print(LLNrun2_clean)
+unique(LLNrun2_clean$spec_id)
+unique(LLNrun2_clean$plot)
+```
+
+
 AGGGGHHH I accidentally put QUAB and QUAL both meaning Quercus alba
 ```{r}
 LLN2122_clean <- LLN2122_clean %>%
@@ -425,9 +487,12 @@ unique(LLN2122_clean$spec_id)
 unique(LLN2122_clean$plot)
 ```
 
-Combining my 2 dataframes
+Combining my 3 dataframes
 ```{r}
-LLNdattot <- bind_rows(LLN2122_clean, LLN18_clean)
+LLNdattot <- bind_rows(LLN2122_clean, LLN18_clean, LLNrun2_clean)
+
+LLNdattot <- LLNdattot %>%
+  mutate(year = as.numeric(as.character(year)))
 
 dim(LLNdattot)
 unique(LLNdattot$year)
@@ -441,6 +506,7 @@ LLN_spec <- LLNdattot %>%
 unique(LLN_spec$spec_id)
 dim(LLN_spec)
 ```
+
 ```{r}
 #write.csv(LLN_spec, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter ", "CNcombined.csv"), row.names=F)
 ```
@@ -463,27 +529,35 @@ LLN_spec <- LLN_spec %>%
 LLN_spec <- LLN_spec %>%
   mutate(
     sci_name = case_when(
-    spec_id == "ACSA" ~ "Acer Saccharum", 
+    spec_id == "ACSA" ~ "Acer saccharum", 
     TRUE ~ sci_name
   )
   )
 
-print(LLN_spec)
+head(LLN_spec)
+unique(LLN_spec$sci_name)
 ```
 ___________________________________________________________________________________________________________________________________________
 *Looking at just N*
 ```{r}
 ggplot(data = LLN_spec, aes(x = week, y = N_percent, color = plot)) + 
   geom_point(alpha = 0.7) +
-  geom_smooth(method = "loess", se = FALSE) +
-  labs(x = "Week", y = "C/N Ratio", color = "plot") +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Week", y = "%N", color = "plot") +
   theme_minimal()
 
 ggplot(data = LLN_spec, aes(x = week, y = N_percent, color = plot)) + 
   facet_grid(~sci_name) +
   geom_point(alpha = 0.7) +
-  geom_smooth(method = "loess", se = FALSE) +
-  labs(x = "Week", y = "C/N Ratio", color = "plot") +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Week", y = "%N", color = "plot") +
+  theme_minimal()
+
+ggplot(data = LLN_spec, aes(x = week, y = N_percent, color = as.factor(year))) + 
+  facet_grid(~sci_name) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Week", y = "%N", color = "year") +
   theme_minimal()
 ```
 
@@ -503,52 +577,53 @@ summary(NMet)
 ```{r}
 ggplot(data = NMet, aes(x = n.Rainless, y = N_percent)) + 
   geom_point(alpha = 0.7) +
-  geom_smooth(method = "loess", se = FALSE) +
+  geom_smooth(method = "lm", se = FALSE) +
   labs(x = "Number of Rainless Days", y = "%N", color = "Species") +
   theme_minimal()
 
 ggplot(data = NMet, aes(x = prcp..mm.day., y = N_percent)) + 
   geom_point(alpha = 0.7) +
-  geom_smooth(method = "loess", se = FALSE) +
+  geom_smooth(method = "lm", se = FALSE) +
   labs(x = "Number of Rainless Days", y = "%N", color = "Species") +
   theme_minimal()
 
 ggplot(data = NMet, aes(x = RainlessConsec.max, y = N_percent)) + 
   geom_point(alpha = 0.7) +
-  geom_smooth(method = "loess", se = FALSE) +
+  geom_smooth(method = "lm", se = FALSE) +
   labs(x = "Number of Consecutive Rainless Days", y = "%N") +
   theme_minimal()
 
 ggplot(data = NMet, aes(x = tmax..deg.c., y = N_percent)) + 
   geom_point(alpha = 0.7) +
-  geom_smooth(method = "loess", se = FALSE) +
+  geom_smooth(method = "lm", se = FALSE) +
   labs(x = "Maximum Temperature", y = "%N") +
   theme_minimal()
 
 ggplot(data = NMet, aes(x = vp..Pa., y = N_percent)) + 
   geom_point(alpha = 0.7) +
-  geom_smooth(method = "loess", se = FALSE) +
+  geom_smooth(method = "lm", se = FALSE) +
   labs(x = "Vapor Pressure", y = "%N") +
   theme_minimal()
 ```
+
 ```{r}
-lmeNRainless <- lme(n.Rainless ~ N_percent, random=list(plot=~1), data=NMet)
+lmeNRainless <- lme(N_percent ~ n.Rainless, random=list(plot=~1), data=NMet)
 summary(lmeNRainless)
 anova(lmeNRainless)
 
-lmeNRainlessConsec <- lme(RainlessConsec.max ~ N_percent, random=list(plot=~1), data=NMet)
+lmeNRainlessConsec <- lme(N_percent ~ RainlessConsec.max, random=list(plot=~1), data=NMet)
 summary(lmeNRainlessConsec)
 anova(lmeNRainlessConsec)
 
-lmeNPrcp <- lme(prcp..mm.day. ~ N_percent, random=list(plot=~1), data=NMet)
+lmeNPrcp <- lme(N_percent ~ prcp..mm.day., random=list(plot=~1), data=NMet)
 summary(lmeNPrcp)
 anova(lmeNPrcp)
 
-lmeNTmax <- lme(tmax..deg.c. ~ N_percent, random=list(plot=~1), data=NMet)
+lmeNTmax <- lme(N_percent ~ tmax..deg.c., random=list(plot=~1), data=NMet)
 summary(lmeNTmax)
 anova(lmeNTmax)
 
-lmeNVP <- lme(vp..Pa. ~ N_percent, random=list(plot=~1), data=NMet)
+lmeNVP <- lme(N_percent ~ vp..Pa., random=list(plot=~1), data=NMet)
 summary(lmeNVP)
 anova(lmeNVP)
 ```
@@ -571,6 +646,7 @@ LLN_spec <- LLN_spec %>%
   ))
 
 unique(LLN_spec$plot)
+
 ```
 
 
@@ -581,9 +657,30 @@ aggwkpkPlot$year <- as.character(aggwkpkPlot$year)
 summary(aggwkpkPlot)
 
 LLN_plot <- merge(aggwkpkPlot, LLN_spec, by = c("year", "plot"), all.x = TRUE)
+head(LLN_plot)
+
+lmAll <- lme(N_percent ~ weekPeak, random=list(sci_name=~1, year=~1, week=~1, plot=~1), data=LLN_plot, na.action=na.omit)
+summary(lmAll)$tTable
+
+lmAllSPP <- lme(N_percent ~ weekPeak + sci_name, random=list(year=~1, week=~1, plot=~1), data=LLN_plot[,], na.action=na.omit)
+anova(lmAllSPP)
+summary(lmAllSPP)$tTable
+
+lmAllACSA <- lme(N_percent ~ weekPeak, random=list(year=~1, week=~1, plot=~1), data=LLN_plot[LLN_plot$sci_name=="Acer saccharum",], na.action=na.omit)
+summary(lmAllACSA)$tTable
+
+lmAllQUAL <- lme(N_percent ~ weekPeak, random=list(year=~1, week=~1, plot=~1), data=LLN_plot[LLN_plot$sci_name=="Quercus alba",], na.action=na.omit)
+summary(lmAllQUAL)$tTable
+
+
+
+lmAll2 <- lme(N_percent ~ week, random=list(sci_name=~1, plot=~1), data=LLN_plot, na.action=na.omit)
+summary(lmAll2)$tTable
+
 
 LLN_peak <- LLN_plot %>%
-  filter(week == round(weekPeak))
+  filter(week >= round(weekPeak) - 1 & week <= round(weekPeak) + 1)
+
 
 # Now you have a new dataframe with only the samples you want
 dim(LLN_peak)
@@ -594,8 +691,34 @@ head(LLN_peak)
 ```{r}
 ggplot(data = LLN_peak, aes(x = weekPeak, y = N_percent, color=plot)) + 
   geom_point(alpha = 0.7) +
-  geom_smooth(method = "loess", se = FALSE) +
+  geom_smooth(method = "lm", se = FALSE) +
   labs(x = "Week Peak", y = "%N") +
+  theme_minimal()
+
+ggplot(data = LLN_peak, aes(x = weekPeak, y = N_percent, color=sci_name)) + 
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Week Peak", y = "%N") +
+  theme_minimal()
+
+ggplot(data = LLN_peak, aes(x = weekPeak, y = N_percent)) + 
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Week Peak", y = "%N") +
+  theme_minimal()
+
+ggplot(data = LLN_peak, aes(x = week, y = N_percent, color = as.factor(year))) + 
+  facet_grid(~sci_name) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Week", y = "%N", color = "year") +
+  theme_minimal()
+
+ggplot(data = LLN_peak, aes(x = weekPeak, y = N_percent, color = as.factor(year))) + 
+  facet_grid(~sci_name) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Week Peak", y = "%N", color = "year") +
   theme_minimal()
 ```
 
@@ -608,6 +731,20 @@ anova(lmeNwkpk)
 lmeNwkpkSpp <- lme(N_percent ~ weekPeak*sci_name, random=list(plot=~1), data=LLN_peak)
 summary(lmeNwkpkSpp)$tTable
 anova(lmeNwkpkSpp)
+```
 
+
+#not currently functional
+```{r}
+LLN_trap <- merge(leafTrapTotal, LLN_spec, by = c("year", "plot", "week", ), all.x = T)
+dim(LLN_trap)
+head(LLN_trap)
+masterdf <- merge(LLN_plot, metSummer,  by = c("year"), all.x=T)
+dim(masterdf)
+head(masterdf)
+```
+
+```{r}
+lme(N_percent ~ weekPeak * n.Rainless * sci_name, random=list(plot=~1, trap_ID=~1), data=masterdf)
 ```
 
