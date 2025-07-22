@@ -114,7 +114,7 @@ grid.arrange(
   heights = c(1, 10)
 )
 
-\)
+
 
 #----checking for DBH Increase form 2018 to 2025
 itsup<- which(dat.dbh$`2018 DBH` < dat.dbh$`2025 DBH`)
@@ -172,7 +172,19 @@ for(plot_name in unique_plots) {
   print(p)
 }
 
+dat.dbh$DBH_difference <- dat.dbh$`2025 DBH` - dat.dbh$`2018 DBH`
 
+# Create histogram of DBH differences faceted by plot
+ggplot(data = dat.dbh, aes(x = DBH_difference)) +
+  geom_histogram(binwidth = 0.5, fill = "steelblue", alpha = 0.7, color = "black") +
+  facet_wrap(~ IMLS_Plot, scales = "free_y") +
+  labs(x = "DBH Difference (cm) [2025 - 2018]", 
+       y = "Frequency", 
+       title = "Distribution of DBH Change by Plot (2018 to 2025)") +
+  theme_minimal() +
+  theme(strip.text = element_text(face = "bold"),
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red", alpha = 0.7)
 
 # Create  new columns for years to make analysis easieee
 dat.dbh.long <- data.frame(
@@ -200,3 +212,146 @@ ggplot(data = dat.dbh.long) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
 
 ############################
+#calculate basal area for trees  and add them to column
+# formula for basal area is dbh^2 * 0.005454
+
+dat.dbh$`basal_area_25` <- dat.dbh$`2025 DBH`^2*0.005454
+dat.dbh$`basal_area_18` <- dat.dbh$`2018 DBH`^2*0.005454
+
+# Get basal area change for individual trees
+dat.dbh$BA_diff <- dat.dbh$`basal_area_25` - dat.dbh$`basal_area_18`
+
+dat.ba <- dat.dbh[dat.dbh$`Plot Location`=='core',c("IMLS_Plot","Tag","Sp_code", "Plot Location",
+"basal_area_25", "basal_area_18", "BA_diff")]
+
+
+# Aggreagate total basal area by plot for each year
+ba_plot <- aggregate(cbind(basal_area_18, basal_area_25) ~ IMLS_Plot, 
+                                data = dat.ba, 
+                                FUN = sum)
+# Calculate basal area change and percent change by plot
+ba_plot$BA_change <- ba_plot$basal_area_25 - ba_plot$basal_area_18
+ba_plot$BA_percent_change <- (ba_plot$BA_change / ba_plot$basal_area_18) * 100
+
+ba_long <- data.frame(
+  IMLS_Plot = rep(ba_plot$IMLS_Plot, 2),
+  Year = rep(c("2018", "2025"), each = nrow(ba_plot)),
+  Basal_Area = c(ba_plot$basal_area_18, ba_plot$basal_area_25))
+
+# Bar chart comparing 2018 vs 2025 basal area by plot
+ggplot(data = ba_long, aes(x = IMLS_Plot, y = Basal_Area, fill = Year)) +
+  geom_col(position = "dodge", alpha = 0.7, color = "black") +
+  labs(x = "IMLS Plot", 
+       y = "Total Basal Area (cm²)", 
+       title = "Total Basal Area Comparison by Core Plot (2018 vs 2025)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom") +
+  scale_fill_manual(values = c("2018" = "steelblue", "2025" = "coral"))
+
+# Basal area change by plot
+ggplot(data = ba_plot, aes(x = IMLS_Plot, y = BA_change)) +
+  geom_col(aes(fill = ifelse(BA_change >= 0, "Increase", "Decrease")), 
+           alpha = 0.7, color = "black") +
+  labs(x = "IMLS Plot", 
+       y = "Basal Area Change (cm²) [2025 - 2018]", 
+       title = "Basal Area Change by Core Plot",
+       fill = "Change Type") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+  scale_fill_manual(values = c("Increase" = "steelblue", "Decrease" = "coral"))
+
+# % change in basal area
+ggplot(data = ba_plot, aes(x = IMLS_Plot, y = BA_percent_change)) +
+  geom_col(aes(fill = ifelse(BA_percent_change >= 0, "Increase", "Decrease")), 
+           alpha = 0.7, color = "black") +
+  labs(x = "IMLS Plot", 
+       y = "Basal Area Change (%)", 
+       title = "Percent Change in Basal Area by Core Plot (2018 to 2025)",
+       fill = "Change Type") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+  scale_fill_manual(values = c("Increase" = "steelblue", "Decrease" = "coral"))
+
+
+# Individual tree basal area changes by tag - faceted by plot
+ggplot(data = dat.ba, aes(x = as.factor(Tag), y = BA_diff)) +
+  geom_col(aes(fill = ifelse(BA_diff >= 0, "Increase", "Decrease")), 
+           alpha = 0.7, color = "black", size = 0.3) +
+  facet_wrap(~ IMLS_Plot, scales = "free_x") +
+  labs(x = "Tag", 
+       y = "Basal Area Change (cm²) [2025 - 2018]", 
+       title = "Individual Tree Basal Area Change by Tag and Core Plot",
+       fill = "Change Type") +
+  theme_minimal() +
+  theme(strip.text = element_text(face = "bold"),
+        axis.text.x = element_text(angle = 75, hjust = 1, size = 8),
+        legend.position = "bottom") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black", alpha = 0.7) +
+  scale_fill_manual(values = c("Increase" = "steelblue", "Decrease" = "coral"))
+
+# Histogram of individual tree basal area changes by plot
+ggplot(data = dat.ba, aes(x = BA_diff)) +
+  geom_histogram(binwidth = 0.01, fill = "lightblue", alpha = 0.7, color = "black") +
+  facet_wrap(~ IMLS_Plot, scales = "free_y") +
+  labs(x = "Individual Tree Basal Area Change (cm²)", 
+       y = "Frequency", 
+       title = "Distribution of Individual Tree Basal Area Changes by Core Plot") +
+  theme_minimal() +
+  theme(strip.text = element_text(face = "bold")) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red")
+
+
+# Getting Basal area figues by genus 
+
+# Extractomg genus from species code by taking the first two letters
+ dat.ba$Genus <- substr(dat.ba$Sp_code, 1, 2)
+
+# Create data for stacked bar plot by genus
+ba_genus_plot <- aggregate(cbind(basal_area_18, basal_area_25) ~ IMLS_Plot + Genus, 
+                           data = dat.ba, 
+                           FUN = sum)
+
+# Create long format for stacked bar plot
+ba_genus_long <- data.frame(
+  IMLS_Plot = rep(ba_genus_plot$IMLS_Plot, 2),
+  Genus = rep(ba_genus_plot$Genus, 2),
+  Year = rep(c("2018", "2025"), each = nrow(ba_genus_plot)),
+  Basal_Area = c(ba_genus_plot$basal_area_18, ba_genus_plot$basal_area_25)
+)
+
+# Stacked bar plot of basal area by genus, faceted by plot
+ggplot(data = ba_genus_long, aes(x = Year, y = Basal_Area, fill = Genus)) +
+  geom_col(position = "stack", alpha = 0.8, color = "black", size = 0.2) +
+  facet_wrap(~ IMLS_Plot, scales = "free_y") +
+  labs(x = "Year", 
+       y = "Total Basal Area (cm²)", 
+       title = "Basal Area by Genus and Year",
+       fill = "Genus") +
+  theme_minimal() +
+  theme(strip.text = element_text(face = "bold"),
+        legend.position = "bottom",
+        axis.text.x = element_text(size = 10)) +
+  scale_fill_brewer(type = "qual", palette = "Set3")
+
+# Alternative version: Stacked bar showing change (2025 - 2018) by genus
+ba_genus_change <- aggregate(BA_diff ~ IMLS_Plot + Genus, 
+                             data = dat.ba, 
+                             FUN = sum)
+
+ggplot(data = ba_genus_change, aes(x = IMLS_Plot, y = BA_diff, fill = Genus)) +
+  geom_col(position = "stack", alpha = 0.8, color = "black", size = 0.2) +
+  labs(x = "IMLS Plot", 
+       y = "Basal Area Change (cm²) [2025 - 2018]", 
+       title = "Basal Area Change by Genus and Core Plot",
+       fill = "Genus") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+  scale_fill_brewer(type = "qual", palette = "Set3")
+
