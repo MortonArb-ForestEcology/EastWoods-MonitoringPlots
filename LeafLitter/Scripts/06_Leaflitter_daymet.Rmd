@@ -103,14 +103,14 @@ ggplot(data = leafTrapTotal, aes(x = n.Rainless, y = weekPeak)) +
   theme(legend.position = "right")
 ```
 ```{r}
-ggplot(data = leafTrapTotal, aes(x = n.Rainless, y = weekPeak)) + 
+ggplot(data = leafTrapMet, aes(x = n.Rainless, y = weekPeak)) + 
   geom_point(aes(color=plot), alpha = 0.7) +
   geom_smooth(method = "lm", se = FALSE, color = "black", linewidth=0.75) +
   labs(x = "Number of Rainless Days", y = "Week of Peak Senescence") +
   geom_label(
     label="Wet & Early", 
     x=55,
-    y=42,
+    y=23,
     label.padding = unit(0.35, "lines"), 
     label.size = 0.35,
     color = "darkgrey",
@@ -127,8 +127,8 @@ ggplot(data = leafTrapTotal, aes(x = n.Rainless, y = weekPeak)) +
   )+
     geom_label(
     label="Dry & Early", 
-    x=70,
-    y=42,
+    x=69,
+    y=23,
     label.padding = unit(0.35, "lines"), 
     label.size = 0.35,
     color = "darkgrey",
