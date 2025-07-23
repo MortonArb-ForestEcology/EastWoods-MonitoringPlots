@@ -91,13 +91,20 @@ dim(datNone)
 summary(datNone)
 ```
 
+```{r}
+datLitter_cleaned <- datLitter %>%
+  mutate(sci_name = paste(genus, species, sep = " ")) %>%
+  filter(!is.na(plot)) %>% # Filter out NA plots
+  filter(!is.na(trap_ID)) %>% # Filter out NA trap_IDs
+  filter(tissue == "leaf") # Filter to 'leaf' tissue only
+```
+
+
 Summing to the trap level --> good to use for comparisons of plots and forest wide things
 ```{r}
-aggLeafTrap <- aggregate(mass_g ~ year + week + date_collection + plot + trap_ID, data=datLitter[datLitter$tissue=="leaf",], FUN=sum)
-summary(aggLeafTrap)
-
-aggLeafTrap <- rbind(aggLeafTrap, datNone[,c("year", "week", "date_collection", "plot", "trap_ID", "mass_g")], datMissing[,c("year", "week", "date_collection", "plot", "trap_ID", "mass_g")])
-summary(aggLeafTrap)
+aggLeafTrap <- datLitter %>%
+  group_by(year, week, date_collection, plot, trap_ID) %>%
+  summarise(mass_g = sum(mass_g, na.rm = TRUE), .groups = 'drop')
 ```
 
 ```{r}
@@ -132,6 +139,8 @@ aggLeafTrap <- merge(aggLeafTrap, allCollect, all=T)
 aggLeafTrap$year <- lubridate::year(aggLeafTrap$date_collection)
 aggLeafTrap$week <- lubridate::week(aggLeafTrap$date_collection)
 summary(aggLeafTrap)
+
+
 
 # This added in a lot of NAs because we added half our traps a couple years in
 for(PLT in unique(aggLeafTrap$plot)){
@@ -171,8 +180,21 @@ aggLeafTrap[is.na(aggLeafTrap$totalMass_year),]
 Plot level --> Will need for nitrogen analysis
 ```{r}
 # Getting some plot-level summary stats
-aggLeafPlot <- aggregate(cbind(mass_g, mass_g_day, mass_prop, totalMass_year)~ year + plot + week + date_collection, data=aggLeafTrap, FUN=mean)
+aggLeafPlot <- aggLeafTrap %>%
+  group_by(year, plot, week, date_collection) %>%
+  summarise(
+    mass_g = mean(mass_g, na.rm = TRUE), # Mean mass_g across traps for this plot-week
+    mass_g_day = mean(mass_g_day, na.rm = TRUE), # Mean mass_g_day across traps
+    mass_prop = mean(mass_prop, na.rm = TRUE), # Mean mass_prop across traps
+    totalMass_year = first(totalMass_year), # totalMass_year should be consistent per plot-year
+    .groups = 'drop'
+  )
 summary(aggLeafPlot)
+
+aggLeafPlot_by_species <- datLitter %>%
+  group_by(year, week, date_collection, plot, sci_name) %>%
+  summarise(mass_g_species = sum(mass_g, na.rm = TRUE), .groups = 'drop')
+summary(aggLeafPlot_by_species)
 ```
 
 ```{r}
@@ -330,6 +352,12 @@ LLNrun2 <- read_excel(LLNrun2path)
 head(LLNrun2)
 ```
 
+Load in Cierra's 3rd run (mostly 2020 and a few 2018)
+```{r}
+LLNrun3path<-list.files(cierra.path, pattern = "Lizer_EWLL_Run3_SH_072125.xlsx", full.names = TRUE)
+LLNrun3 <- read_excel(LLNrun3path)
+head(LLNrun3)
+```
 
 Rename columns to be easier to read and pull information out from the name
 ```{r}
@@ -464,6 +492,59 @@ unique(LLNrun2_clean$plot)
 ```
 
 
+Cleaning of Run 3
+```{r}
+LLNrun3_select <- LLNrun3 %>%
+  select(Name, Method, `N  [%]`, `C  [%]`, `C/N  ratio`)
+
+LLNrun3_clean <- LLNrun3_select %>%
+  mutate(
+    `N  [%]` = as.numeric(`N  [%]`), 
+    `C  [%]` = as.numeric(`C  [%]`),
+    `C/N  ratio` = as.numeric(`C/N  ratio`)
+  )%>%
+
+#need to take out blanks and standards, some are labeled with different methods, some have values of 0.
+ filter(Method == "Plant") %>%
+ filter(!(`N  [%]` == 0 & `C  [%]` == 0 & `C/N  ratio` == 0)) %>%
+  
+  rename(
+    CN_ratio = `C/N  ratio`,
+    N_percent = `N  [%]`,
+    C_percent = `C  [%]`
+  ) %>%
+  
+  mutate(
+    spec_id = str_sub(Name, -4), # Get the last 4 characters
+    date_raw = str_sub(Name, -13, -5), #finds the 8 characters before the last underscore (5th to last character)
+    #note: will give year, month, day in a string together
+    plot = str_extract(Name, "^[^_]+") # Extracts characters from start (^) until the first underscore (_)
+  ) %>%
+#convert date_raw into a readable year format
+  mutate(
+    date = ymd(date_raw),
+    year = year(date),
+    week = isoweek(date)
+  ) %>%
+  mutate(year = factor(year)) %>%
+  select(
+    Name, plot, date, year, week, spec_id, everything(), -date_raw, -Method # Keep original, then new columns, then rest
+  )
+
+LLNrun3_clean <- LLNrun3_clean %>%
+  mutate(
+    plot = case_when(
+    plot == "H115" ~ "HH115",
+    plot == "HH15" ~ "HH115",
+    TRUE ~ plot
+    )
+  )
+
+print(LLNrun3_clean)
+unique(LLNrun3_clean$spec_id)
+unique(LLNrun3_clean$plot)
+```
+
 AGGGGHHH I accidentally put QUAB and QUAL both meaning Quercus alba
 ```{r}
 LLN2122_clean <- LLN2122_clean %>%
@@ -489,7 +570,7 @@ unique(LLN2122_clean$plot)
 
 Combining my 3 dataframes
 ```{r}
-LLNdattot <- bind_rows(LLN2122_clean, LLN18_clean, LLNrun2_clean)
+LLNdattot <- bind_rows(LLN2122_clean, LLN18_clean, LLNrun2_clean, LLNrun3_clean)
 
 LLNdattot <- LLNdattot %>%
   mutate(year = as.numeric(as.character(year)))
@@ -569,6 +650,7 @@ anova(lmeNyear)
 
 ___________________________________________________________________________________________________________________________________________
 *N and Met data*
+
 ```{r}
 NMet <- merge(LLN_spec, metSummer,  by = c("year"), all.x=T)
 summary(NMet)
@@ -649,42 +731,126 @@ unique(LLN_spec$plot)
 
 ```
 
+```{r}
+total_plot_week_mass <- aggLeafPlot_by_species %>%
+  group_by(year, plot, week, date_collection) %>%
+  summarise(total_mass_g_for_peak_calc = sum(mass_g_species, na.rm = TRUE), .groups = 'drop') %>%
+  # Join with allCollect to get `days_collection` for `mass_g_day` calculation at plot level
+  left_join(allCollect %>% select(plot, date_collection, days_collection) %>% distinct(), # Use distinct to avoid duplicates
+            by = c("plot", "date_collection")) %>%
+  mutate(mass_g_day_for_peak_calc = total_mass_g_for_peak_calc / days_collection)
+summary(total_plot_week_mass)
+
+weekPeak_plot_level_summary <- total_plot_week_mass %>%
+  group_by(year, plot) %>%
+  # Filter for max mass_g_day (handling all NA cases)
+  filter(if(all(is.na(mass_g_day_for_peak_calc))) TRUE else mass_g_day_for_peak_calc == max(mass_g_day_for_peak_calc, na.rm = TRUE)) %>%
+  rename(weekPeak = week) %>%
+  ungroup() %>%
+  select(year, plot, weekPeak, date = date_collection) 
+
+totalMass_year_per_plot <- aggLeafPlot_by_species %>%
+    group_by(year, plot) %>%
+    summarise(totalMass_year_plot = sum(mass_g_species, na.rm = TRUE), .groups = 'drop')
+summary(totalMass_year_per_plot)
+
+aggwkpkPlot <- left_join(weekPeak_plot_level_summary, totalMass_year_per_plot, by = c("year", "plot")) %>%
+    mutate(year = as.character(year))
+
+```
 
 ```{r}
-aggwkpkPlot <- aggregate(weekPeak ~ year + plot, data = leafTrapTotal, FUN = mean)
-aggwkpkPlot$year <- as.character(aggwkpkPlot$year)
-
-summary(aggwkpkPlot)
+aggwkpkPlot <- leafTrapTotal %>%
+  group_by(year, plot) %>%
+  summarise(
+    weekPeak = mean(weekPeak, na.rm = TRUE), 
+    totalMass_year = first(totalMass_year),  
+    .groups = 'drop'
+  ) %>%
+  mutate(year = as.character(year))
+dim(leafTrapTotal)
+dim(aggwkpkPlot)
+head(aggwkpkPlot)
 
 LLN_plot <- merge(aggwkpkPlot, LLN_spec, by = c("year", "plot"), all.x = TRUE)
+##still something wrong with this
+dim(LLN_plot)
+dim(LLN_spec)
 head(LLN_plot)
 
-lmAll <- lme(N_percent ~ weekPeak, random=list(sci_name=~1, year=~1, week=~1, plot=~1), data=LLN_plot, na.action=na.omit)
-summary(lmAll)$tTable
-
-lmAllSPP <- lme(N_percent ~ weekPeak + sci_name, random=list(year=~1, week=~1, plot=~1), data=LLN_plot[,], na.action=na.omit)
-anova(lmAllSPP)
-summary(lmAllSPP)$tTable
-
-lmAllACSA <- lme(N_percent ~ weekPeak, random=list(year=~1, week=~1, plot=~1), data=LLN_plot[LLN_plot$sci_name=="Acer saccharum",], na.action=na.omit)
-summary(lmAllACSA)$tTable
-
-lmAllQUAL <- lme(N_percent ~ weekPeak, random=list(year=~1, week=~1, plot=~1), data=LLN_plot[LLN_plot$sci_name=="Quercus alba",], na.action=na.omit)
-summary(lmAllQUAL)$tTable
-
-
-
-lmAll2 <- lme(N_percent ~ week, random=list(sci_name=~1, plot=~1), data=LLN_plot, na.action=na.omit)
-summary(lmAll2)$tTable
-
-
 LLN_peak <- LLN_plot %>%
+  filter(week >= round(weekPeak) - 1 & week <= round(weekPeak) + 1)
+dim(LLN_peak)
+head(LLN_peak)
+```
+
+
+```{r}
+#apparently there is a duplicate in LLN_spec
+LLN_spec_unique <- LLN_spec %>%
+  group_by(year, plot, week, sci_name) %>%
+  summarise(N_percent = mean(N_percent, na.rm = TRUE), .groups = 'drop')
+print(LLN_spec_unique %>% count(year, plot, week, sci_name) %>% filter(n > 1)) #should be zero
+
+
+aggLeafPlot_by_species <- aggLeafPlot_by_species %>%
+  mutate(year = as.character(year))
+LLN_spec_unique <- LLN_spec_unique %>%
+  mutate(year = as.character(year))
+
+LLN_plotNew <- aggLeafPlot_by_species %>%
+  inner_join(LLN_spec_unique, by = c("year", "plot", "week", "sci_name"),
+             suffix = c("_litter", "_N_spec")) %>%
+  left_join(aggwkpkPlot %>% select(year, plot, weekPeak, totalMass_year_plot, date),
+            by = c("year", "plot")) %>%
+  mutate(totalN_g = mass_g_species * (N_percent / 100))
+
+####UGGG WE LOST OBSERVATIONS I'M GOING TO HAVE TO FIGURE THIS OUT
+dim(LLN_plotNew)
+dim(LLN_spec)
+head(LLN_plotNew)
+
+#TRYING TO TROUBLESHOOT BUT HAVEN'T DONE ANYTHING YET
+aggLeafPlot_by_species_for_check <- aggLeafPlot_by_species %>%
+  mutate(year = as.character(year)) # Make sure this matches your LLN_spec year type
+lost_LLN_spec_rows <- LLN_spec_unique %>%
+  anti_join(aggLeafPlot_by_species_for_check, by = c("year", "plot", "week", "sci_name"))
+print(lost_LLN_spec_rows)
+
+
+
+# Making a weighted average
+total_mass_Nwksppltyr <- LLN_plot %>%
+  group_by(year, plot, sci_name) %>%
+  summarise(total_mass_species_in_N_weeks = sum(mass_g_species, na.rm = TRUE), .groups = 'drop')
+
+LLN_plot_with_weighted_N <- LLN_plot %>%
+  left_join(total_mass_Nwksppltyr, by = c("year", "plot", "sci_name")) %>%
+  mutate(
+    mass_prop_species_within_N_weeks = mass_g_species / total_mass_species_in_N_weeks,
+    weighted_N_contribution_per_week = N_percent * mass_prop_species_within_N_weeks
+  )
+
+weighted_N_summary_per_species_plot_year <- LLN_plot_with_weighted_N %>%
+  group_by(year, plot, sci_name) %>%
+  summarise(
+    weighted_avg_N_percent = sum(weighted_N_contribution_per_week, na.rm = TRUE),
+    total_N_g_in_N_weeks = sum(totalN_g, na.rm = TRUE),
+    total_mass_g_in_N_weeks = first(total_mass_species_in_N_weeks),
+    .groups = 'drop'
+  )
+
+head(weighted_N_summary_per_species_plot_year)
+dim(weighted_N_summary_per_species_plot_year)
+
+LLN_peakNew <- LLN_plotNew %>%
   filter(week >= round(weekPeak) - 1 & week <= round(weekPeak) + 1)
 
 
 # Now you have a new dataframe with only the samples you want
-dim(LLN_peak)
-head(LLN_peak)
+dim(LLN_peakNew)
+head(LLN_peakNew)
+
 
 ```
 
@@ -694,6 +860,19 @@ ggplot(data = LLN_peak, aes(x = weekPeak, y = N_percent, color=plot)) +
   geom_smooth(method = "lm", se = FALSE) +
   labs(x = "Week Peak", y = "%N") +
   theme_minimal()
+
+ggplot(data = LLN_plot, aes(x = week, y = N_percent)) + 
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Week", y = "%N") +
+  theme_minimal()
+
+ggplot(data = LLN_plot, aes(x = weekPeak, y = N_percent)) + 
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Week Peak", y = "%N") +
+  theme_minimal()+
+  xlim(42, 47)
 
 ggplot(data = LLN_peak, aes(x = weekPeak, y = N_percent, color=sci_name)) + 
   geom_point(alpha = 0.7) +
@@ -723,6 +902,35 @@ ggplot(data = LLN_peak, aes(x = weekPeak, y = N_percent, color = as.factor(year)
 ```
 
 ```{r}
+ggplot(data = LLN_peak, aes(x = weekPeak, y = N_percent)) + 
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Week Peak", y = "%N") +
+  theme_minimal()+
+  xlim(42, 47)
+
+ggplot(data = LLN_plot, aes(x = week, y = N_percent)) + 
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Week", y = "%N") +
+  theme_minimal()
+
+ggplot(data = LLN_peak, aes(x = weekPeak, y = totalN_g)) + 
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Week Peak", y = "total N (g)") +
+  theme_minimal()+
+  xlim(42, 47)
+
+ggplot(data = LLN_plot, aes(x = week, y = totalN_g)) + 
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Week", y = "total N (g)") +
+  theme_minimal()
+```
+
+
+```{r}
 # lmeNwkpk <- lme(weekPeak ~ N_percent, random=list(sci_name=~1, plot=~1), data=LLN_plot)
 lmeNwkpk <- lme(N_percent ~ weekPeak, random=list(sci_name=~1, plot=~1), data=LLN_peak)
 summary(lmeNwkpk)$tTable
@@ -731,20 +939,23 @@ anova(lmeNwkpk)
 lmeNwkpkSpp <- lme(N_percent ~ weekPeak*sci_name, random=list(plot=~1), data=LLN_peak)
 summary(lmeNwkpkSpp)$tTable
 anova(lmeNwkpkSpp)
-```
+
+lmAll <- lme(N_percent ~ weekPeak, random=list(sci_name=~1, year=~1, week=~1, plot=~1), data=LLN_plot, na.action=na.omit)
+summary(lmAll)$tTable
+
+lmAllSPP <- lme(N_percent ~ weekPeak + sci_name, random=list(year=~1, week=~1, plot=~1), data=LLN_plot[,], na.action=na.omit)
+anova(lmAllSPP)
+summary(lmAllSPP)$tTable
+
+lmAllACSA <- lme(N_percent ~ weekPeak, random=list(year=~1, week=~1, plot=~1), data=LLN_plot[LLN_plot$sci_name=="Acer saccharum",], na.action=na.omit)
+summary(lmAllACSA)$tTable
+
+lmAllQUAL <- lme(N_percent ~ weekPeak, random=list(year=~1, week=~1, plot=~1), data=LLN_plot[LLN_plot$sci_name=="Quercus alba",], na.action=na.omit)
+summary(lmAllQUAL)$tTable
 
 
-#not currently functional
-```{r}
-LLN_trap <- merge(leafTrapTotal, LLN_spec, by = c("year", "plot", "week", ), all.x = T)
-dim(LLN_trap)
-head(LLN_trap)
-masterdf <- merge(LLN_plot, metSummer,  by = c("year"), all.x=T)
-dim(masterdf)
-head(masterdf)
+lmAll2 <- lme(N_percent ~ week, random=list(sci_name=~1, plot=~1), data=LLN_plot, na.action=na.omit)
+summary(lmAll2)$tTable
 ```
 
-```{r}
-lme(N_percent ~ weekPeak * n.Rainless * sci_name, random=list(plot=~1, trap_ID=~1), data=masterdf)
-```
 
