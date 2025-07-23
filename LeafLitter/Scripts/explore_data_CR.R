@@ -50,7 +50,7 @@ datLitter <- datLitter[datLitter$year<2024,]
 summary(datLitter)
 
 metSummer <- read.csv("~/Google Drive/My Drive/URF REU 2025 - Lizer - Leaf Litter /data/daymet/daymet_June-July-August_summaries_2017-2023.csv")
-
+summary(metSummer)
 
 # There is no HH-115 NE, NW, SE, SW --> it has a weird layout
 datLitter[datLitter$plot=="HH-115" & datLitter$trap_ID %in% c("NE", "NW", "SE", "SW"), "trap_ID"] <- NA

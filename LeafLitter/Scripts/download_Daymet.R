@@ -17,6 +17,14 @@ metAll <- metAll$data
 metAll$date <- as.Date(paste(metAll$year, metAll$yday, sep="-"), format="%Y-%j")
 metAll$month <- lubridate::month(metAll$date)
 metAll$week <- lubridate::week(metAll$date)
+
+# Using Teton's equation to calculate saturated VP so we can get VPD; note using 610.78 bc we have VP in PA; not kPA
+metAll$vp.sat.max <- 610.78*exp(17.27*metAll$tmax..deg.c./(metAll$tmax..deg.c.+237.73))
+metAll$vp.sat.min <- 610.78*exp(17.27*metAll$tmin..deg.c./(metAll$tmin..deg.c.+237.73))
+metAll$VPD.tmax <- metAll$vp.sat.max - metAll$vp..Pa.
+metAll$VPD.tmin <- metAll$vp.sat.min - metAll$vp..Pa.
+metAll$VPD.tmin[metAll$VPD.tmin<0] <- 0 # VPD can't be negative in reality, so make 0
+metAll$VPD.avg <- apply(metAll[,c("VPD.tmax", "VPD.tmin")], 1, mean)
 summary(metAll)
 
 write.csv(metAll, file.path(pathOut, "daymet_raw_2017-2023.csv"), row.names=F)
@@ -27,7 +35,7 @@ metJJA <- metAll[metAll$month %in% c(6:8),]
 summary(metJJA)
 # Note: SWE = snow-water equivalent; so it *should* be 0 for summer
 
-metJJAyr <- aggregate(cbind(prcp..mm.day., srad..W.m.2., swe..kg.m.2., tmax..deg.c., tmin..deg.c., vp..Pa.) ~ year, data=metJJA, FUN=mean)
+metJJAyr <- aggregate(cbind(prcp..mm.day., srad..W.m.2., swe..kg.m.2., tmax..deg.c., tmin..deg.c., vp..Pa., VPD.tmax, VPD.tmin, VPD.avg) ~ year, data=metJJA, FUN=mean)
 summary(metJJAyr)
 
 for(i in 1:nrow(metJJAyr)){
