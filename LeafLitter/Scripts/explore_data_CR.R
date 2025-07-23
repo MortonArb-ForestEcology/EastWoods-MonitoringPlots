@@ -199,7 +199,14 @@ for(YR in unique(weekPeak$year)){
     
     indPeak <- which(datPlot$mass_g_day==max(datPlot$mass_g_day))
     wkPeak <- datPlot$week[indPeak]
+    
+    # Recalculating proportion/weidghts based on rates; it's slightly different, but not dramatically
+    datPlot$mass_g_day_Prop <- datPlot$mass_g_day/sum(datPlot$mass_g_day, na.rm=T)
+    wkPeakWeight <- sum(datPlot$week*datPlot$mass_g_day_Prop)
+    # wkPeakWeight2 <- sum(datPlot$week*datPlot$mass_prop)
+    
     weekPeak$week[indNow] <- wkPeak
+    weekPeak$weekPeakWt[indNow] <- wkPeakWeight
     weekPeak$date[indNow] <- as.character(datPlot$date_collection[indPeak])
     weekPeak$propPeak[indNow] <- datPlot$mass_prop[indPeak]
     weekPeak$prop9Wk[indNow] <- sum(datPlot$mass_prop[datPlot$week %in% (wkPeak-4):(wkPeak + 4)])
@@ -238,8 +245,15 @@ for(YR in unique(aggLeafTrap$year)){
       print(paste(TRP, "-", indNow))
       indPeak <- which(datTrp$mass_g_day==max(datTrp$mass_g_day, na.rm=T))
       wkPeak <- datTrp$week[indPeak]
+      
+      # Recalculating proportion/weidghts based on rates; it's slightly different, but not dramatically
+      datTrp$mass_g_day_Prop <- datTrp$mass_g_day/sum(datTrp$mass_g_day, na.rm=T)
+      wkPeakWeight <- sum(datTrp$week*datTrp$mass_g_day_Prop, na.rm=T)
+      
+      
       # tmpPleafTrapTotaleak <- data.frame(year = YR, plot=PLT, trap_ID=TRP, week=NA, date=NA, propPeak=NA)
       leafTrapTotal[indNow,"weekPeak"] <- wkPeak
+      leafTrapTotal[indNow, "weekPeakWt"] <- wkPeakWeight
       leafTrapTotal[indNow,"date"] <- as.character(datTrp$date_collection[indPeak])
       leafTrapTotal[indNow,"propPeak"] <- datTrp$mass_prop[indPeak]
       # tmpPeak[1,"prop9Wk"] <- sum(datTrp$mass_prop[datTrp$week %in% (wkPeak-4):(wkPeak + 4)])
@@ -250,7 +264,7 @@ for(YR in unique(aggLeafTrap$year)){
 }
 # weekPeakTrap$date <- as.Date(weekPeakTrap$date)
 summary(leafTrapTotal)
-summary(leafTrapTotal[is.na(leafTrapTotal$weekPeak),])
+# summary(leafTrapTotal[is.na(leafTrapTotal$weekPeak),])
 # weekPeak[weekPeak$prop5Wk<0.5,]
 
 leafTrapTotal <- merge(leafTrapTotal, metSummer, all.x=T)
@@ -260,42 +274,63 @@ ggplot(data=leafTrapTotal) +
   geom_boxplot(aes(x=as.factor(year), y=weekPeak)) +
   geom_point(aes(x=as.factor(year), y=weekPeak, color=plot), position=position_jitter(0.1))
 
+ggplot(data=leafTrapTotal) +
+  geom_boxplot(aes(x=as.factor(year), y=weekPeakWt)) +
+  geom_point(aes(x=as.factor(year), y=weekPeakWt, color=plot), position=position_jitter(0.1))
 
 ggplot(data=leafTrapTotal) +
   # geom_boxplot(aes(x=as.factor(year), y=weekPeak)) +
   geom_point(aes(x=prcp..mm.day., y=weekPeak, color=plot)) +
   stat_smooth(aes(x=prcp..mm.day., y=weekPeak), method="lm")
 
-lmYrs <- lm(weekPeak ~ as.factor(year), data=leafTrapTotal)
-summary(lmYrs)
-anova(lmYrs)
+ggplot(data=leafTrapTotal) +
+  # geom_boxplot(aes(x=as.factor(year), y=weekPeak)) +
+  geom_point(aes(x=prcp..mm.day., y=weekPeakWt, color=plot)) +
+  stat_smooth(aes(x=prcp..mm.day., y=weekPeakWt), method="lm")
 
-lmRainless <- lm(weekPeak ~ n.Rainless, data=leafTrapTotal)
-summary(lmRainless)
-anova(lmRainless)
+# lmYrs <- lm(weekPeak ~ as.factor(year), data=leafTrapTotal)
+# summary(lmYrs)
+# anova(lmYrs)
+# lmYrs2 <- lm(weekPeakWt ~ as.factor(year), data=leafTrapTotal)
+# summary(lmYrs2)
+# anova(lmYrs2)
+# 
+# 
+# lmRainless <- lm(weekPeak ~ n.Rainless, data=leafTrapTotal)
+# summary(lmRainless)
+# anova(lmRainless)
 
 
 lmeYrs <- lme(weekPeak ~ as.factor(year), random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
 summary(lmeYrs)
 anova(lmeYrs)
 
+
 yrsComp <- emmeans(lmeYrs, ~year)
 pairs(yrsComp, adjust="tukey")
-
-lmeYrsInt <- lme(weekPeak ~ as.factor(year)-1, random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
-summary(lmeYrsInt)
 
 mean(leafTrapTotal$weekPeak[leafTrapTotal$year==2021])
 mean(leafTrapTotal$weekPeak[leafTrapTotal$year==2018])
 mean(leafTrapTotal$weekPeak[leafTrapTotal$year==2022])
 
+lmeYrs2 <- lme(weekPeakWt ~ as.factor(year), random=list(plot=~1, trap_ID=~1), data=leafTrapTotal, na.action=na.omit)
+summary(lmeYrs2)
+anova(lmeYrs2)
+
+lmeYrsInt <- lme(weekPeakWt ~ as.factor(year)-1, random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
+summary(lmeYrsInt)
+
+mean(leafTrapTotal$weekPeakWt[leafTrapTotal$year==2021])
+mean(leafTrapTotal$weekPeakWt[leafTrapTotal$year==2018])
+mean(leafTrapTotal$weekPeakWt[leafTrapTotal$year==2022])
+
 ggplot(data=leafTrapTotal) +
   # geom_boxplot(aes(x=as.factor(year), y=weekPeak)) +
-  geom_point(aes(x=n.Rainless, y=weekPeak, color=plot)) +
-  stat_smooth(aes(x=n.Rainless, y=weekPeak), method="lm")
+  geom_point(aes(x=n.Rainless, y=weekPeakWt, color=plot)) +
+  stat_smooth(aes(x=n.Rainless, y=weekPeakWt), method="lm")
 
 
-lmeRainless <- lme(weekPeak ~ n.Rainless, random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
+lmeRainless <- lme(weekPeakWt ~ n.Rainless, random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
 summary(lmeRainless)
 anova(lmeRainless)
 
@@ -314,18 +349,28 @@ mean(leafTrapTotal$RainlessConsec.max[leafTrapTotal$year==2022])
 
 ggplot(data=leafTrapTotal) +
   # geom_boxplot(aes(x=as.factor(year), y=weekPeak)) +
-  geom_point(aes(x=RainlessConsec.max, y=weekPeak, color=plot)) +
-  stat_smooth(aes(x=RainlessConsec.max, y=weekPeak), method="lm")
+  geom_point(aes(x=RainlessConsec.max, y=weekPeakWt, color=plot)) +
+  stat_smooth(aes(x=RainlessConsec.max, y=weekPeakWt), method="lm")
 
 
-lmePrcp <- lme(weekPeak ~ prcp..mm.day., random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
+lmePrcp <- lme(weekPeakWt ~ prcp..mm.day., random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
 summary(lmePrcp)
 anova(lmePrcp)
 
+lmeVPD <- lme(weekPeakWt ~ VPD.tmax, random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
+summary(lmeVPD)
+anova(lmeVPD)
+
 ggplot(data=leafTrapTotal) +
   # geom_boxplot(aes(x=as.factor(year), y=weekPeak)) +
-  geom_point(aes(x=tmax..deg.c., y=weekPeak, color=plot)) +
-  stat_smooth(aes(x=tmax..deg.c., y=weekPeak), method="lm")
+  geom_point(aes(x=VPD.tmax, y=weekPeakWt, color=plot)) #+
+  # stat_smooth(aes(x=VPD.tmax, y=weekPeakWt), method="lm")
+
+
+ggplot(data=leafTrapTotal) +
+  # geom_boxplot(aes(x=as.factor(year), y=weekPeak)) +
+  geom_point(aes(x=tmax..deg.c., y=weekPeakWt, color=plot)) +
+  stat_smooth(aes(x=tmax..deg.c., y=weekPeakWt), method="lm")
 
 
 lmeTmax <- lme(weekPeak ~ tmax..deg.c., random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
@@ -354,7 +399,7 @@ mean(leafTrapTotal$vp..Pa.[leafTrapTotal$year==2021])
 mean(leafTrapTotal$vp..Pa.[leafTrapTotal$year==2018])
 mean(leafTrapTotal$vp..Pa.[leafTrapTotal$year==2022])
 
-lmeYrs2021 <- lme(weekPeak ~ relevel(as.factor(year), "2021"), random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
+lmeYrs2021 <- lme(weekPeakWt ~ relevel(as.factor(year), "2023"), random=list(plot=~1, trap_ID=~1), data=leafTrapTotal)
 summary(lmeYrs2021)
 anova(lmeYrs2021)
 
