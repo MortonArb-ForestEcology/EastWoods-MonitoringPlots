@@ -96,13 +96,13 @@ datLitter_cleaned <- datLitter %>%
   mutate(sci_name = paste(genus, species, sep = " ")) %>%
   filter(!is.na(plot)) %>% # Filter out NA plots
   filter(!is.na(trap_ID)) %>% # Filter out NA trap_IDs
-  filter(tissue == "leaf") # Filter to 'leaf' tissue only
+  filter(tissue == "leaf") # Filter to leaf tissue only
 ```
 
 
 Summing to the trap level --> good to use for comparisons of plots and forest wide things
 ```{r}
-aggLeafTrap <- datLitter %>%
+aggLeafTrap <- datLitter_cleaned %>%
   group_by(year, week, date_collection, plot, trap_ID) %>%
   summarise(mass_g = sum(mass_g, na.rm = TRUE), .groups = 'drop')
 ```
@@ -191,7 +191,7 @@ aggLeafPlot <- aggLeafTrap %>%
   )
 summary(aggLeafPlot)
 
-aggLeafPlot_by_species <- datLitter %>%
+aggLeafPlot_by_species <- datLitter_cleaned %>%
   group_by(year, week, date_collection, plot, sci_name) %>%
   summarise(mass_g_species = sum(mass_g, na.rm = TRUE), .groups = 'drop')
 summary(aggLeafPlot_by_species)
@@ -268,12 +268,22 @@ Want it aggregated at the trap level so we can have replicates within plots
 
 ```{r}
 metSummer <- read.csv("G:/.shortcut-targets-by-id/1q2wvODXrDo0tgOTLpFqF7TqcWoKoHZjW/URF REU 2025 - Lizer - Leaf Litter/data/daymet/daymet_June-July-August_summaries_2017-2023.csv")
+summary(metSummer)
 ```
 
 ```{r}
 leafTrapMet <- merge(leafTrapTotal, metSummer, all.x=T)
 summary(leafTrapMet)
 ```
+
+Filter to be just the years I did nitrogen analysis on
+```{r}
+years_for_nitrogen_analysis <- c(2018, 2020, 2021, 2022)
+
+leafTrapMet_filter <- leafTrapMet %>%
+  filter(year %in% years_for_nitrogen_analysis)
+```
+
 
 ```{r}
 lmeYrs <- lme(weekPeak ~ as.factor(year), random=list(plot=~1, trap_ID=~1), data=leafTrapMet)
@@ -299,6 +309,10 @@ anova(lmeLLTmax)
 lmeLLVP <- lme(weekPeak ~ vp..Pa., random=list(plot=~1, trap_ID=~1), data=leafTrapMet)
 summary(lmeLLVP)
 anova(lmeLLVP)
+
+lmeLLVPD <- lme(weekPeak ~ VPD.avg, random=list(plot=~1, trap_ID=~1), data=leafTrapMet)
+summary(lmeLLVPD)$tTable
+anova(lmeLLVPD)
 ```
 
 ```{r}
@@ -307,22 +321,33 @@ ggplot(data=leafTrapMet) +
   geom_point(aes(x=as.factor(year), y=weekPeak, color=plot), position=position_jitter(0.1))
 
 
-ggplot(data=leafTrapMet) +
+ggplot(data = leafTrapMet_filter, aes(x = n.Rainless, y = weekPeak)) +
+  geom_point(aes(color=as.character(year)), alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Number of Rainless Days", y = "Week Peak") +
+  theme_minimal()
+
+ggplot(data=leafTrapMet_filter, aes(x=prcp..mm.day., y=weekPeak)) +
   # geom_boxplot(aes(x=as.factor(year), y=weekPeak)) +
-  geom_point(aes(x=n.Rainless, y=weekPeak, color=plot))
+  geom_point(aes(color=plot), alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE)
 
-ggplot(data=leafTrapMet) +
-  # geom_boxplot(aes(x=as.factor(year), y=weekPeak)) +
-  geom_point(aes(x=prcp..mm.day., y=weekPeak, color=plot))
 
-ggplot(data=leafTrapMet)+
-  geom_point(aes(x=RainlessConsec.max, y=weekPeak, color=plot))
+ggplot(data=leafTrapMet_filter, aes(x=RainlessConsec.max, y=weekPeak))+
+  geom_point(aes(color=plot), alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE)
 
-ggplot(data=leafTrapMet)+
-  geom_point(aes(x=tmax..deg.c., y=weekPeak, color=plot))
+ggplot(data=leafTrapMet_filter, aes(x=tmax..deg.c., y=weekPeak))+
+  geom_point(aes(color=plot), alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE)
 
-ggplot(data=leafTrapMet)+
-  geom_point(aes(x=vp..Pa., y=weekPeak, color=plot))
+ggplot(data=leafTrapMet_filter, aes(x=vp..Pa., y=weekPeak))+
+  geom_point(aes(color=plot), alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE)
+
+ggplot(data=leafTrapMet_filter, aes(x=VPD.avg, y=weekPeak))+
+  geom_point(aes(color=plot), alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE)
 ```
 
 ___________________________________________________________________________________________________________________________________________
@@ -732,6 +757,12 @@ unique(LLN_spec$plot)
 ```
 
 ```{r}
+aggLeafPlot_by_species <- datLitter_cleaned %>%
+  mutate(sci_name = paste(genus, species, sep = " ")) %>%
+  group_by(year, week, date_collection, plot, sci_name) %>%
+  summarise(mass_g_species = sum(mass_g, na.rm = TRUE), .groups = 'drop') %>%
+  mutate(year = as.character(year)) 
+
 total_plot_week_mass <- aggLeafPlot_by_species %>%
   group_by(year, plot, week, date_collection) %>%
   summarise(total_mass_g_for_peak_calc = sum(mass_g_species, na.rm = TRUE), .groups = 'drop') %>%
@@ -749,16 +780,29 @@ weekPeak_plot_level_summary <- total_plot_week_mass %>%
   ungroup() %>%
   select(year, plot, weekPeak, date = date_collection) 
 
+weekPeak_plot_level_summary <- total_plot_week_mass %>%
+  group_by(year, plot) %>%
+  filter(if(all(is.na(mass_g_day_for_peak_calc))) TRUE else mass_g_day_for_peak_calc == max(mass_g_day_for_peak_calc, na.rm = TRUE)) %>%
+  rename(weekPeak = week) %>%
+  ungroup() %>%
+  # *** REMOVE 'date = date_collection' from this select statement ***
+  select(year, plot, weekPeak)
+
 totalMass_year_per_plot <- aggLeafPlot_by_species %>%
     group_by(year, plot) %>%
     summarise(totalMass_year_plot = sum(mass_g_species, na.rm = TRUE), .groups = 'drop')
-summary(totalMass_year_per_plot)
 
-aggwkpkPlot <- left_join(weekPeak_plot_level_summary, totalMass_year_per_plot, by = c("year", "plot")) %>%
-    mutate(year = as.character(year))
+aggwkpkPlot <- left_join(
+  weekPeak_plot_level_summary, # This no longer has 'date'
+  totalMass_year_per_plot,
+  by = c("year", "plot")
+) %>%
+  mutate(year = as.character(year))
 
 ```
 
+
+OG code without mass
 ```{r}
 aggwkpkPlot <- leafTrapTotal %>%
   group_by(year, plot) %>%
@@ -772,7 +816,11 @@ dim(leafTrapTotal)
 dim(aggwkpkPlot)
 head(aggwkpkPlot)
 
-LLN_plot <- merge(aggwkpkPlot, LLN_spec, by = c("year", "plot"), all.x = TRUE)
+LLN_spec <- LLN_spec %>%
+  mutate(year = as.character(year))
+
+LLN_plot <- LLN_spec %>%
+  left_join(aggwkpkPlot, by = c("year", "plot"))
 ##still something wrong with this
 dim(LLN_plot)
 dim(LLN_spec)
@@ -784,7 +832,7 @@ dim(LLN_peak)
 head(LLN_peak)
 ```
 
-
+new merge with masses to get total N
 ```{r}
 #apparently there is a duplicate in LLN_spec
 LLN_spec_unique <- LLN_spec %>%
@@ -798,12 +846,18 @@ aggLeafPlot_by_species <- aggLeafPlot_by_species %>%
 LLN_spec_unique <- LLN_spec_unique %>%
   mutate(year = as.character(year))
 
+
+totalMass_year_per_plot <- aggLeafPlot_by_species %>%
+    group_by(year, plot) %>%
+    summarise(totalMass_year_plot = sum(mass_g_species, na.rm = TRUE), .groups = 'drop')
+
 LLN_plotNew <- aggLeafPlot_by_species %>%
   inner_join(LLN_spec_unique, by = c("year", "plot", "week", "sci_name"),
              suffix = c("_litter", "_N_spec")) %>%
-  left_join(aggwkpkPlot %>% select(year, plot, weekPeak, totalMass_year_plot, date),
+  left_join(aggwkpkPlot %>% select(year, plot, weekPeak, totalMass_year_plot),
             by = c("year", "plot")) %>%
   mutate(totalN_g = mass_g_species * (N_percent / 100))
+
 
 ####UGGG WE LOST OBSERVATIONS I'M GOING TO HAVE TO FIGURE THIS OUT
 dim(LLN_plotNew)
@@ -850,8 +904,6 @@ LLN_peakNew <- LLN_plotNew %>%
 # Now you have a new dataframe with only the samples you want
 dim(LLN_peakNew)
 head(LLN_peakNew)
-
-
 ```
 
 ```{r}
@@ -956,6 +1008,57 @@ summary(lmAllQUAL)$tTable
 
 lmAll2 <- lme(N_percent ~ week, random=list(sci_name=~1, plot=~1), data=LLN_plot, na.action=na.omit)
 summary(lmAll2)$tTable
+```
+
+
+
+```{r}
+aggwkpkPlotWt <- leafTrapTotal %>%
+  group_by(year, plot) %>%
+  summarise(
+    weekPeakWt = mean(weekPeakWt, na.rm = TRUE), 
+    totalMass_year = first(totalMass_year),  
+    .groups = 'drop'
+  ) %>%
+  mutate(year = as.character(year))
+dim(leafTrapTotal)
+dim(aggwkpkPlotWt)
+head(aggwkpkPlotWt)
+
+LLN_plotWt <- merge(aggwkpkPlotWt, LLN_spec, by = c("year", "plot"), all.x = TRUE)
+##still something wrong with this
+dim(LLN_plotWt)
+dim(LLN_spec)
+head(LLN_plotWt)
+
+LLN_peakWt <- LLN_plotWt %>%
+  filter(week >= round(weekPeakWt) - 0.1 & week <= round(weekPeakWt) + 0.1)
+dim(LLN_peakWt)
+head(LLN_peakWt)
+```
+
+```{r}
+my_species_color_map <- c(
+  "Quercus rubra" = "#8C3F48", # Muted Red/Pink
+  "Quercus alba" = "#A6761D", # Muted Gold/Yellow
+  "Acer saccharum" = "#006D6F"  # Light Purple
+)
+
+ggplot(data=LLN_peakWt, aes(x = weekPeakWt, y = N_percent)) +
+  geom_smooth(method = "lm", se= FALSE, size = 2, color = title_color) + # Choose a single color
+  geom_point(aes(color=sci_name), size = 3, alpha=0.7) +
+  labs(
+    x = "Week of Peak Leaf Drop",
+    y = "Nitrogen Percentage\nin Leaf Litter (%)",
+    color = "Species"
+  ) + 
+  scale_color_manual(values = my_species_color_map) + 
+  theme_minimal(base_size = 20) +
+ theme(
+    axis.title = element_text(color = text_color),
+    axis.text = element_text(color = text_color),
+    legend.position = "none",
+  )
 ```
 
 
