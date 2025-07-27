@@ -141,6 +141,9 @@ summary(allCollect)
 
 # Merging the number of days in each collection period with the actual data
 summary(allCollect)
+allCollect$year <- lubridate::year(allCollect$date_collection)
+allCollect$week <- lubridate::week(allCollect$date_collection)
+allCollect$yday <- lubridate::yday(allCollect$date_collection)
 hist(allCollect$days_collection)
 
 
@@ -150,6 +153,17 @@ aggLeafTrap <- merge(aggLeafTrap, allCollect, all=T)
 # aggLeafTrap$year <- lubridate::year(aggLeafTrap$date_collection)
 # aggLeafTrap$week <- lubridate::week(aggLeafTrap$date_collection)
 summary(aggLeafTrap)
+
+# Also merging the AllCollect part into the species table
+summary(allCollect); 
+dim(datLeaf)
+datLeaf <- merge(datLeaf, allCollect, all=T)
+datLeaf$mass_g_day <- datLeaf$mass_g/datLeaf$days_collection
+summary(datLeaf)
+dim(datLeaf)
+
+
+write.csv(datLeaf, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter ", "LeafLitter_byTrap_bySpecies_latest.csv"), row.names=F)
 
 # This added in a lot of NAs because we added half our traps a couple years in
 for(PLT in unique(aggLeafTrap$plot)){
@@ -270,5 +284,60 @@ head(leafTrapTotal)
 write.csv(leafTrapTotal, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter ", "LeafLitter_Peak_byTrap.csv"), row.names=F)
 
 
+# Now Doing week peak by Species by Plot
+# Getting some plot-level summary stats
+aggLeafPlotSpp <- aggregate(cbind(mass_g, mass_g_day)~ year + plot + sci_name + week + date_collection, data=datLeaf, FUN=mean, na.rm=T)
+summary(aggLeafPlotSpp)
+
+weekPeakSpp <- data.frame(year=rep(unique(aggLeafPlotSpp$year), each=length(unique(aggLeafPlotSpp$plot))*length(unique(aggLeafPlotSpp$sci_name))),
+                       plot=rep(unique(aggLeafPlotSpp$plot), each=length(unique(aggLeafPlotSpp$sci_name))),
+                       sci_name=rep(unique(aggLeafPlotSpp$sci_name)),
+                       week=NA,
+                       weekPeakWt=NA,
+                       date=NA,
+                       propPeak = NA,
+                       prop9Wk = NA,
+                       prop5Wk = NA,
+                       prop3Wk = NA)
+weekPeakSpp <- weekPeakSpp[!weekPeakSpp$sci_name %in% c("NA NA", "unknown unknown", "Quercus unknown"),]
+head(weekPeakSpp)
+tail(weekPeakSpp)
+
+for(YR in unique(weekPeakSpp$year)){
+  datYr <- datLeaf[datLeaf$year==YR,]
+  for(PLT in unique(datYr$plot)){
+    datPlot <- datYr[datYr$plot==PLT,]
+    for(SPP in unique(datPlot$sci_name)){
+      if(SPP %in% c("NA NA", "unknown unknown", "Quercus unknown")) next
+      datSPP <- datPlot[datPlot$sci_name==SPP,]
+      
+      if(all(is.na(datSPP$mass_g_day)) | max(datSPP$mass_g_day, na.rm=T)==0) next # Skip species we don't have
+      indNow <- which(weekPeakSpp$year==YR & weekPeakSpp$plot==PLT & weekPeakSpp$sci_name==SPP)
+      
+      indPeak <- which(datSPP$mass_g_day==max(datSPP$mass_g_day, na.rm=T))
+      wkPeak <- datSPP$week[indPeak]
+      
+      # Recalculating proportion/weidghts based on rates; it's slightly different, but not dramatically
+      datSPP$mass_g_day_Prop <- datSPP$mass_g_day/sum(datSPP$mass_g_day, na.rm=T)
+      wkPeakWeight <- sum(datSPP$week*datSPP$mass_g_day_Prop, na.rm=T)
+      # wkPeakWeight2 <- sum(datPlot$week*datPlot$mass_prop)
+      
+      weekPeakSpp$week[indNow] <- wkPeak
+      weekPeakSpp$weekPeakWt[indNow] <- wkPeakWeight
+      weekPeakSpp$date[indNow] <- as.character(datSPP$date_collection[indPeak])
+      weekPeakSpp$propPeak[indNow] <- datSPP$mass_g_day_Prop[indPeak]
+      weekPeakSpp$prop9Wk[indNow] <- sum(datSPP$mass_g_day_Prop[datSPP$week %in% (wkPeak-4):(wkPeak + 4)])
+      weekPeakSpp$prop5Wk[indNow] <- sum(datSPP$mass_g_day_Prop[datSPP$week %in% (wkPeak-2):(wkPeak + 2)])
+      weekPeakSpp$prop3Wk[indNow] <- sum(datSPP$mass_g_day_Prop[datSPP$week %in% (wkPeak-1):(wkPeak + 1)])
+    }
+    
+  }
+}
+weekPeakSpp$date <- as.Date(weekPeakSpp$date)
+summary(weekPeakSpp)
+weekPeakSpp[weekPeakSpp$prop5Wk<0.5 & !is.na(weekPeakSpp$prop5Wk),]
 
 
+write.csv(weekPeakSpp, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter ", "PeakLeafDates_byPlot_bySpp.csv"), row.names=F)
+# 
+# 
