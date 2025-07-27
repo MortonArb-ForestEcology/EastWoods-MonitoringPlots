@@ -30,7 +30,7 @@ LLN2018$plot[substr(LLN2018$Name,1,1)=="U"] <- "U-134"
 LLN2018$plot <-as.factor(LLN2018$plot)
 
 # 2018 Date
-LLN2018$date_collected <- as.Date(substr(LLN2018$Name, 3, 10), format="%y-%m-%d")
+LLN2018$date_collection <- as.Date(substr(LLN2018$Name, 3, 10), format="%y-%m-%d")
 summary(LLN2018)
 
 # 2018 Species
@@ -58,8 +58,8 @@ LLN2122$plot <-as.factor(LLN2122$plot)
 summary(LLN2122)
 
 # 2021-2022 Date
-LLN2122$date_collected <- unlist(lapply(strsplit(LLN2122$Name, "_"), function(x){x[2]}))
-LLN2122$date_collected <- as.Date(LLN2122$date_collected, format="%Y%m%d")
+LLN2122$date_collection <- unlist(lapply(strsplit(LLN2122$Name, "_"), function(x){x[2]}))
+LLN2122$date_collection <- as.Date(LLN2122$date_collection, format="%Y%m%d")
 summary(LLN2122)
 
 # 2021-2022 Species
@@ -89,8 +89,8 @@ LLN2$plot <-as.factor(LLN2$plot)
 summary(LLN2)
 
 # Run2 Date
-LLN2$date_collected <- unlist(lapply(strsplit(LLN2$Name, "_"), function(x){x[2]}))
-LLN2$date_collected <- as.Date(LLN2$date_collected, format="%Y%m%d")
+LLN2$date_collection <- unlist(lapply(strsplit(LLN2$Name, "_"), function(x){x[2]}))
+LLN2$date_collection <- as.Date(LLN2$date_collection, format="%Y%m%d")
 summary(LLN2)
 
 # Run2 Species
@@ -122,8 +122,8 @@ LLN3$plot <-as.factor(LLN3$plot)
 summary(LLN3)
 
 # Run2 Date
-LLN3$date_collected <- unlist(lapply(strsplit(LLN3$Name, "_"), function(x){x[2]}))
-LLN3$date_collected <- as.Date(LLN3$date_collected, format="%Y%m%d")
+LLN3$date_collection <- unlist(lapply(strsplit(LLN3$Name, "_"), function(x){x[2]}))
+LLN3$date_collection <- as.Date(LLN3$date_collection, format="%Y%m%d")
 summary(LLN3)
 
 # Run2 Species
