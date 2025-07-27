@@ -2,7 +2,7 @@ library(ggplot2)
 library(tidyverse)
 library(nlme);  # Does the mixed effects model
 library(emmeans) # will et us do a multi-comparisons test
-
+library(MuMIn)
 
 # Set up file paths etc. --> this should also indicate where you can find these files!
 path.google <- "~/Google Drive/My Drive"
@@ -96,5 +96,99 @@ ggplot(weekPeakTotal, aes(x=prcp..mm.day., y=weekPeakWt)) +
   stat_smooth(method="lm")
 
 # Following the progression of analyses in Cierra's presentation 
+varsDrought <- c("prcp..mm.day.", "VPD.tmax", "tmax..deg.c.", "n.Rainless")
+
+summary(weekPeakTotal)
+weekPeakStack <- stack(weekPeakTotal[,varsDrought])
+weekPeakStack[,c("year", "plot", "trap_ID", "weekPeakWt", "totalMass_year")] <- weekPeakTotal[,c("year", "plot", "trap_ID", "weekPeakWt", "totalMass_year")]
+summary(weekPeakStack)
+
+ggplot(data=weekPeakStack, aes(x=values, y=weekPeakWt)) +
+  facet_wrap(~ind, scales="free_x") +
+  geom_point() +
+  stat_smooth(method="lm")
+
+summary(weekPeakSpp)
+weekPeakStackSpp <- stack(weekPeakSpp[,varsDrought])
+weekPeakStackSpp[,c("year", "plot", "sci_name", "weekPeakWt", "totalMass_year")] <- weekPeakSpp[,c("year", "plot", "sci_name", "weekPeakWt")]
+summary(weekPeakStackSpp)
+
+ggplot(data=weekPeakStackSpp, aes(x=values, y=weekPeakWt, color=sci_name, fill=sci_name)) +
+  facet_wrap(~ind, scales="free_x") +
+  geom_point() +
+  stat_smooth(method="lm")
+
+summary(datLLNpeak)
+llnStackSpp <- stack(datLLNpeak[,varsDrought])
+llnStackSpp[,c("year", "plot", "sci_name", "C.N.weighted", "perN.weighted", "perC.weighted")] <- datLLNpeak[,c("year", "plot", "sci_name", "C.N.weighted", "perN.weighted", "perC.weighted")]
+summary(llnStackSpp)
+
+ggplot(data=llnStackSpp, aes(x=values, y=perN.weighted, color=sci_name, fill=sci_name)) +
+  facet_wrap(~ind, scales="free_x") +
+  geom_point() +
+  stat_smooth(method="lm")
 
 
+# Based off of the above exploratory figures, lets roll with precip & n.Rainless as our vars
+summary(weekPeakTotal)
+totDropPrecip <- lme(weekPeakWt ~ prcp..mm.day., random=list(plot=~1, trap_ID=~1), data=weekPeakTotal)
+summary(totDropPrecip)
+r.squaredGLMM(totDropPrecip)
+
+ggplot(weekPeakTotal, aes(x=prcp..mm.day., y=weekPeakWt)) +
+  geom_point() +
+  stat_smooth(method="lm")
+
+totDropRainless <- lme(weekPeakWt ~ n.Rainless, random=list(plot=~1, trap_ID=~1), data=weekPeakTotal)
+summary(totDropRainless)
+r.squaredGLMM(totDropRainless)
+
+ggplot(weekPeakTotal, aes(x=n.Rainless, y=weekPeakWt)) +
+  geom_point() +
+  stat_smooth(method="lm")
+
+# Working at the plot level to make it comparable to our nitrogen data
+sppDropPrecip <- lme(weekPeakWt ~ prcp..mm.day.*sci_name, random=list(plot=~1), data=weekPeakSpp)
+summary(sppDropPrecip)
+anova(sppDropPrecip)
+r.squaredGLMM(sppDropPrecip)
+
+sppDropPrecip2 <- lme(weekPeakWt ~ prcp..mm.day., random=list(plot=~1, sci_name=~1), data=weekPeakSpp)
+summary(sppDropPrecip2)
+anova(sppDropPrecip2)
+r.squaredGLMM(sppDropPrecip2)
+
+ggplot(weekPeakSpp, aes(x=prcp..mm.day., y=weekPeakWt, color=sci_name, fill=sci_name)) +
+  geom_point() +
+  stat_smooth(method="lm")
+
+
+# Now looking at leaf percent Nitrogen
+sppNPrecip <- lme(perN.weighted ~ prcp..mm.day.*sci_name, random=list(plot=~1), data=datLLNpeak)
+summary(sppNPrecip)
+anova(sppNPrecip)
+r.squaredGLMM(sppNPrecip)
+
+sppNPrecip2 <- lme(perN.weighted ~ prcp..mm.day., random=list(plot=~1, sci_name=~1), data=datLLNpeak)
+summary(sppNPrecip2)
+anova(sppNPrecip2)
+r.squaredGLMM(sppNPrecip2)
+
+ggplot(datLLNpeak, aes(x=prcp..mm.day., y=perN.weighted, color=sci_name, fill=sci_name)) +
+  geom_point() +
+  stat_smooth(method="lm")
+
+
+summary(datLLNpeak)
+summary(weekPeakSpp)
+datLLNpeak <- merge(datLLNpeak, weekPeakSpp[,c("year", "plot", "sci_name", "weekPeakWt", "propPeak", "prop3Wk")], all.x=T, all.y=F)
+summary(datLLNpeak)
+
+ggplot(datLLNpeak, aes(x=weekPeakWt, y=perN.weighted, color=sci_name, fill=sci_name)) +
+  geom_point() +
+  stat_smooth(method="lm")
+
+peakVn <- lme(perN.weighted ~ weekPeakWt, random=list(plot=~1, sci_name=~1), data=datLLNpeak)
+summary(sppNPrecip2)
+anova(sppNPrecip2)
+r.squaredGLMM(sppNPrecip2)
