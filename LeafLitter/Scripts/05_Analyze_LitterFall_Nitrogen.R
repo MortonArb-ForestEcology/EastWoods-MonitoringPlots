@@ -189,6 +189,6 @@ ggplot(datLLNpeak, aes(x=weekPeakWt, y=perN.weighted, color=sci_name, fill=sci_n
   stat_smooth(method="lm")
 
 peakVn <- lme(perN.weighted ~ weekPeakWt, random=list(plot=~1, sci_name=~1), data=datLLNpeak)
-summary(sppNPrecip2)
-anova(sppNPrecip2)
-r.squaredGLMM(sppNPrecip2)
+summary(peakVn)
+anova(peakVn)
+r.squaredGLMM(peakVn)
