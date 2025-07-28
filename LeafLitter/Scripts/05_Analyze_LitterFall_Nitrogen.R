@@ -37,7 +37,7 @@ metSummer <- read.csv(file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter
 
 
 summary(aggLeafTrap)
-summary(leafTrapTotal)
+summary(weekPeakTotal)
 summary(weekPeakSpp)
 summary(datLLN)
 summary(datSpp)
