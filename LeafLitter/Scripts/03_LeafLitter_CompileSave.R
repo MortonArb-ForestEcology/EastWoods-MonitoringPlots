@@ -130,7 +130,8 @@ for(PLT in unique(aggLeafTrap$plot)){
   dfCollection <- data.frame(plot=PLT, trap_ID = rep(unique(datPLT$trap_ID), each=length(datePLT)),
                              date_collection=datePLT, days_collection=c(NA, daysPLT))
   
-  
+  allCollect <- NULL
+    
   if(is.null(allCollect)){
     allCollect <- dfCollection
   } else {
@@ -341,3 +342,4 @@ weekPeakSpp[weekPeakSpp$prop5Wk<0.5 & !is.na(weekPeakSpp$prop5Wk),]
 write.csv(weekPeakSpp, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter ", "PeakLeafDates_byPlot_bySpp.csv"), row.names=F)
 # 
 # 
+
