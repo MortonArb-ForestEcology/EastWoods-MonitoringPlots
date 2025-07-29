@@ -35,7 +35,7 @@ summary(datLitter)
 datLitter <- datLitter[datLitter$year<2024,]
 summary(datLitter)
 
-
+#Issue with this line here----
 # There is no HH-115 NE, NW, SE, SW --> it has a weird layout
 datLitter[datLitter$plot=="HH-115" & datLitter$trap_ID %in% c("NE", "NW", "SE", "SW"), "trap_ID"] <- NA
 
@@ -155,6 +155,10 @@ aggLeafTrap <- merge(aggLeafTrap, allCollect, all=T)
 # aggLeafTrap$week <- lubridate::week(aggLeafTrap$date_collection)
 summary(aggLeafTrap)
 
+
+
+#Weird amount of HH-115 starting here----
+
 # Also merging the AllCollect part into the species table
 summary(allCollect); 
 dim(datLeaf)
@@ -203,7 +207,7 @@ write.csv(aggLeafTrap, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litte
 # Getting some plot-level summary stats
 aggLeafPlot <- aggregate(cbind(mass_g, mass_g_day, mass_prop, totalMass_year)~ year + plot + week + date_collection, data=aggLeafTrap, FUN=mean)
 summary(aggLeafPlot)
-
+ 
 weekPeak <- data.frame(year=rep(unique(aggLeafTrap$year), each=length(unique(aggLeafPlot$plot))),
                        plot=rep(unique(aggLeafPlot$plot)),
                        week=NA,
@@ -243,7 +247,9 @@ weekPeak[weekPeak$prop5Wk<0.5,]
 
 
 write.csv(weekPeak, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter ", "PeakLeafDates_byPlot.csv"), row.names=F)
+#all the info is in weekPeak df, this is fine
 
+#Problem starts here----
 
 summary(leafTrapTotal)
 for(YR in unique(aggLeafTrap$year)){
