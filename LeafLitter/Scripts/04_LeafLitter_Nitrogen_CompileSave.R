@@ -140,6 +140,6 @@ summary(as.factor(LLN3$sci_name))
 datLLN <- rbind(LLN2018, LLN2122, LLN2, LLN3)
 summary(datLLN)
 
-write.csv(datLLN, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter ", "LeafLitter-Nitrogen_bySpecies_combined.csv"), row.names=F)
+write.csv(datLLN, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter", "LeafLitter-Nitrogen_bySpecies_combined.csv"), row.names=F)
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 

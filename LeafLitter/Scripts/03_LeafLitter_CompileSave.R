@@ -108,7 +108,7 @@ datLeaf <- rbind(datLeaf[datLeaf$tissue=="leaf",], datAdd)
 
 # Summing to the trap level
 aggLeafTrap <- aggregate(mass_g ~ year + week + yday + date_collection + plot + trap_ID, data=datLeaf, FUN=sum, na.rm=T, drop=T)
-# summary(aggLeafTrap)
+summary(aggLeafTrap)
 
 # Make sure to add missing back in; doign drop=F above results in too many combos
 aggLeafTrap <- rbind(aggLeafTrap, datMissing[,c("year", "week", "yday", "date_collection", "plot", "trap_ID", "mass_g")])
@@ -130,7 +130,7 @@ for(PLT in unique(aggLeafTrap$plot)){
   dfCollection <- data.frame(plot=PLT, trap_ID = rep(unique(datPLT$trap_ID), each=length(datePLT)),
                              date_collection=datePLT, days_collection=c(NA, daysPLT))
   
-  allCollect <- NULL
+  # allCollect <- NULL
     
   if(is.null(allCollect)){
     allCollect <- dfCollection
@@ -145,14 +145,33 @@ summary(allCollect)
 allCollect$year <- lubridate::year(allCollect$date_collection)
 allCollect$week <- lubridate::week(allCollect$date_collection)
 allCollect$yday <- lubridate::yday(allCollect$date_collection)
+summary(allCollect)
 hist(allCollect$days_collection)
 
+length(unique(aggLeafTrap$date_collection))
+length(unique(allCollect$date_collection))
 
+
+dateLeaf <- unique(aggLeafTrap$date_collection)
+dateAll <- unique(allCollect$date_collection)
+dateLeaf[!dateLeaf %in% dateAll]
+dateAll[!dateAll %in% dateLeaf]
+
+names(aggLeafTrap)
+names(allCollect)
 # aggLeafTrap[aggLeafTrap$year==2022 & aggLeafTrap$date_collection<as.Date("2022-08-15")  & aggLeafTrap$plot=="B-127",]
 dim(aggLeafTrap)
-aggLeafTrap <- merge(aggLeafTrap, allCollect, all=T)
+
+summary(aggLeafTrap)
+aggLeafTrap <- merge(aggLeafTrap, allCollect[,c("plot", "trap_ID", "date_collection", "days_collection")], all.x=T)
+dim(aggLeafTrap)
+# summary(aggLeafTrap)
+# unique(aggLeafTrap$date_collection[is.na(aggLeafTrap2$days_collection)])
+tail(aggLeafTrap[is.na(aggLeafTrap$days_collection),])
 # aggLeafTrap$year <- lubridate::year(aggLeafTrap$date_collection)
 # aggLeafTrap$week <- lubridate::week(aggLeafTrap$date_collection)
+aggLeafTrap$mass_g_day <- aggLeafTrap$mass_g/aggLeafTrap$days_collection
+summary(aggLeafTrap)
 summary(aggLeafTrap)
 
 
@@ -168,7 +187,7 @@ summary(datLeaf)
 dim(datLeaf)
 
 
-write.csv(datLeaf, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter ", "LeafLitter_byTrap_bySpecies_latest.csv"), row.names=F)
+write.csv(datLeaf, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter", "LeafLitter_byTrap_bySpecies_latest.csv"), row.names=F)
 
 # This added in a lot of NAs because we added half our traps a couple years in
 for(PLT in unique(aggLeafTrap$plot)){
@@ -186,8 +205,6 @@ for(PLT in unique(aggLeafTrap$plot)){
 dim(aggLeafTrap)
 summary(aggLeafTrap)
 
-aggLeafTrap$mass_g_day <- aggLeafTrap$mass_g/aggLeafTrap$days_collection
-summary(aggLeafTrap)
 
 # Lets calculate the proportion of leaf fall at any given point in time
 leafTrapTotal <- aggregate(mass_g ~ year + plot + trap_ID, data=aggLeafTrap, FUN=sum)
@@ -202,7 +219,7 @@ aggLeafTrap$mass_prop <- aggLeafTrap$mass_g/aggLeafTrap$totalMass_year
 summary(aggLeafTrap)
 aggLeafTrap[is.na(aggLeafTrap$totalMass_year),]
 
-write.csv(aggLeafTrap, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter ", "LeafLitter_byTrap_latest.csv"), row.names=F)
+write.csv(aggLeafTrap, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter", "LeafLitter_byTrap_latest.csv"), row.names=F)
 
 # Getting some plot-level summary stats
 aggLeafPlot <- aggregate(cbind(mass_g, mass_g_day, mass_prop, totalMass_year)~ year + plot + week + date_collection, data=aggLeafTrap, FUN=mean)
@@ -246,7 +263,7 @@ summary(weekPeak)
 weekPeak[weekPeak$prop5Wk<0.5,]
 
 
-write.csv(weekPeak, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter ", "PeakLeafDates_byPlot.csv"), row.names=F)
+write.csv(weekPeak, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter", "PeakLeafDates_byPlot.csv"), row.names=F)
 #all the info is in weekPeak df, this is fine
 
 #Problem starts here----
@@ -288,7 +305,7 @@ summary(leafTrapTotal)
 # weekPeak[weekPeak$prop5Wk<0.5,]
 head(leafTrapTotal)
 
-write.csv(leafTrapTotal, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter ", "LeafLitter_Peak_byTrap.csv"), row.names=F)
+write.csv(leafTrapTotal, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter", "LeafLitter_Peak_byTrap.csv"), row.names=F)
 
 
 # Now Doing week peak by Species by Plot
@@ -345,7 +362,7 @@ summary(weekPeakSpp)
 weekPeakSpp[weekPeakSpp$prop5Wk<0.5 & !is.na(weekPeakSpp$prop5Wk),]
 
 
-write.csv(weekPeakSpp, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter ", "PeakLeafDates_byPlot_bySpp.csv"), row.names=F)
+write.csv(weekPeakSpp, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter", "PeakLeafDates_byPlot_bySpp.csv"), row.names=F)
 # 
 # 
 

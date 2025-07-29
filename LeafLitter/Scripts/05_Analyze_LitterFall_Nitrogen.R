@@ -9,31 +9,31 @@ path.google <- "~/Google Drive/My Drive"
 path.litter <- file.path(path.google, "East Woods/Rollinson_Monitoring/Data/Leaf_litter_data")
 path.figs <- file.path(path.litter, "figures") # where we shoudl save some figures
 path.save <- file.path(path.litter, "LeafLitterData_Clean_forArchiving") # Where we should save the data
-path.REU <- file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter ")
+path.REU <- file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter")
 
 
 # Read in Data
-aggLeafTrap <- read.csv(file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter ", "LeafLitter_byTrap_latest.csv"))
-weekPeakTotal <- read.csv(file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter ", "LeafLitter_Peak_byTrap.csv"))
+aggLeafTrap <- read.csv(file.path(path.REU, "LeafLitter_byTrap_latest.csv"))
+weekPeakTotal <- read.csv(file.path(path.REU, "LeafLitter_Peak_byTrap.csv"))
 
-weekPeakSpp <- read.csv(file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter ", "PeakLeafDates_byPlot_bySpp.csv"))
+weekPeakSpp <- read.csv(file.path(path.REU, "PeakLeafDates_byPlot_bySpp.csv"))
 weekPeakSpp <- weekPeakSpp[!is.na(weekPeakSpp$sci_name) & weekPeakSpp$sci_name %in% c("Quercus alba", "Quercus rubra", "Acer saccharum"),]
 summary(weekPeakSpp)
 
-datSpp <- read.csv(file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter ", "LeafLitter_byTrap_bySpecies_latest.csv"))
+datSpp <- read.csv(file.path(path.REU, "LeafLitter_byTrap_bySpecies_latest.csv"))
 datSpp$date_collection <- as.Date(datSpp$date_collection)
 datSpp <- datSpp[!is.na(datSpp$sci_name) & datSpp$sci_name %in% c("Quercus alba", "Quercus rubra", "Acer saccharum"),]
 summary(datSpp)
 
 
-datLLN <- read.csv(file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter ", "LeafLitter-Nitrogen_bySpecies_combined.csv"))
+datLLN <- read.csv(file.path(path.REU, "LeafLitter-Nitrogen_bySpecies_combined.csv"))
 datLLN <- datLLN[!datLLN$sci_name %in% c("Tilia americana"),]
 datLLN$date_collection <- as.Date(datLLN$date_collection)
 datLLN$year <- lubridate::year(datLLN$date_collection)
 datLLN$week <- lubridate::week(datLLN$date_collection)
 datLLN$yday <- lubridate::yday(datLLN$date_collection)
 
-metSummer <- read.csv(file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter /data/daymet/daymet_June-July-August_summaries_2017-2023.csv"))
+metSummer <- read.csv(file.path(path.REU,"data/daymet/daymet_June-July-August_summaries_2017-2023.csv"))
 
 
 summary(aggLeafTrap)
