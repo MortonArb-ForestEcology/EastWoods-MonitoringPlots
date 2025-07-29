@@ -34,6 +34,7 @@ datLLN$week <- lubridate::week(datLLN$date_collection)
 datLLN$yday <- lubridate::yday(datLLN$date_collection)
 
 metSummer <- read.csv(file.path(path.REU,"data/daymet/daymet_June-July-August_summaries_2017-2023.csv"))
+metSummer$Precip.tot <- metSummer$Precip.tot*sum(lubridate::days_in_month(6:8))
 
 
 summary(aggLeafTrap)
@@ -76,14 +77,14 @@ datLLNpeak <- merge(datLLNpeak, metSummer, all.x=T, all.y=F)
 summary(datLLNpeak)
 
 # Just a quick visual inspection!
-ggplot(datLLNpeak, aes(x=prcp..mm.day., y=perN.weighted, color=sci_name, fill=sci_name)) +
+ggplot(datLLNpeak, aes(x=Precip.tot, y=perN.weighted, color=sci_name, fill=sci_name)) +
   geom_point() +
   stat_smooth(method="lm")
 
 weekPeakSpp <- merge(weekPeakSpp, metSummer, all.x=T, all.y=F)
 summary(weekPeakSpp)
 
-ggplot(weekPeakSpp, aes(x=prcp..mm.day., y=weekPeakWt, color=sci_name, fill=sci_name)) +
+ggplot(weekPeakSpp, aes(x=Precip.tot, y=weekPeakWt, color=sci_name, fill=sci_name)) +
   geom_point() +
   stat_smooth(method="lm")
 
@@ -91,12 +92,12 @@ ggplot(weekPeakSpp, aes(x=prcp..mm.day., y=weekPeakWt, color=sci_name, fill=sci_
 weekPeakTotal <- merge(weekPeakTotal, metSummer, all.x=T, all.y=F)
 summary(weekPeakTotal)
 
-ggplot(weekPeakTotal, aes(x=prcp..mm.day., y=weekPeakWt)) +
+ggplot(weekPeakTotal, aes(x=Precip.tot, y=weekPeakWt)) +
   geom_point() +
   stat_smooth(method="lm")
 
 # Following the progression of analyses in Cierra's presentation 
-varsDrought <- c("prcp..mm.day.", "VPD.tmax", "tmax..deg.c.", "n.Rainless")
+varsDrought <- c("Precip.tot", "VPD.tmax", "tmax..deg.c.", "n.Rainless")
 
 summary(weekPeakTotal)
 weekPeakStack <- stack(weekPeakTotal[,varsDrought])
@@ -131,11 +132,12 @@ ggplot(data=llnStackSpp, aes(x=values, y=perN.weighted, color=sci_name, fill=sci
 
 # Based off of the above exploratory figures, lets roll with precip & n.Rainless as our vars
 summary(weekPeakTotal)
-totDropPrecip <- lme(weekPeakWt ~ prcp..mm.day., random=list(plot=~1, trap_ID=~1), data=weekPeakTotal)
+totDropPrecip <- lme(weekPeakWt ~ Precip.tot, random=list(plot=~1, trap_ID=~1), data=weekPeakTotal)
 summary(totDropPrecip)
+anova(totDropPrecip)
 r.squaredGLMM(totDropPrecip)
 
-ggplot(weekPeakTotal, aes(x=prcp..mm.day., y=weekPeakWt)) +
+ggplot(weekPeakTotal, aes(x=Precip.tot, y=weekPeakWt)) +
   geom_point() +
   stat_smooth(method="lm")
 
@@ -147,34 +149,66 @@ ggplot(weekPeakTotal, aes(x=n.Rainless, y=weekPeakWt)) +
   geom_point() +
   stat_smooth(method="lm")
 
+totDropTmax <- lme(weekPeakWt ~ tmax..deg.c., random=list(plot=~1, trap_ID=~1), data=weekPeakTotal)
+summary(totDropTmax)
+r.squaredGLMM(totDropTmax)
+
+ggplot(weekPeakTotal, aes(x=tmax..deg.c., y=weekPeakWt)) +
+  geom_point() +
+  stat_smooth(method="lm")
+
+
+
+totDropVPDmax <- lme(weekPeakWt ~ VPD.tmax, random=list(plot=~1, trap_ID=~1), data=weekPeakTotal)
+summary(totDropVPDmax)
+r.squaredGLMM(totDropVPDmax)
+
+ggplot(weekPeakTotal, aes(x=VPD.tmax, y=weekPeakWt)) +
+  geom_point() +
+  stat_smooth(method="lm")
+
+
+library(mgcv)
+totDropVPDmax2 <- gamm(weekPeakWt ~ s(VPD.tmax, k=3), random=list(plot=~1, trap_ID=~1), data=weekPeakTotal)
+summary(totDropVPDmax2)
+summary(totDropVPDmax2$gam)
+plot(totDropVPDmax2$gam)
+r.squaredGLMM(totDropVPDmax2$lme)
+
+ggplot(weekPeakTotal, aes(x=VPD.tmax, y=weekPeakWt)) +
+  geom_point() +
+  stat_smooth(method="loess")
+
+
+
 # Working at the plot level to make it comparable to our nitrogen data
-sppDropPrecip <- lme(weekPeakWt ~ prcp..mm.day.*sci_name, random=list(plot=~1), data=weekPeakSpp)
+sppDropPrecip <- lme(weekPeakWt ~ Precip.tot*sci_name, random=list(plot=~1), data=weekPeakSpp)
 summary(sppDropPrecip)
 anova(sppDropPrecip)
 r.squaredGLMM(sppDropPrecip)
 
-sppDropPrecip2 <- lme(weekPeakWt ~ prcp..mm.day., random=list(plot=~1, sci_name=~1), data=weekPeakSpp)
+sppDropPrecip2 <- lme(weekPeakWt ~ Precip.tot, random=list(plot=~1, sci_name=~1), data=weekPeakSpp)
 summary(sppDropPrecip2)
 anova(sppDropPrecip2)
 r.squaredGLMM(sppDropPrecip2)
 
-ggplot(weekPeakSpp, aes(x=prcp..mm.day., y=weekPeakWt, color=sci_name, fill=sci_name)) +
+ggplot(weekPeakSpp, aes(x=Precip.tot, y=weekPeakWt, color=sci_name, fill=sci_name)) +
   geom_point() +
   stat_smooth(method="lm")
 
 
 # Now looking at leaf percent Nitrogen
-sppNPrecip <- lme(perN.weighted ~ prcp..mm.day.*sci_name, random=list(plot=~1), data=datLLNpeak)
+sppNPrecip <- lme(perN.weighted ~ Precip.tot*sci_name, random=list(plot=~1), data=datLLNpeak)
 summary(sppNPrecip)
 anova(sppNPrecip)
 r.squaredGLMM(sppNPrecip)
 
-sppNPrecip2 <- lme(perN.weighted ~ prcp..mm.day., random=list(plot=~1, sci_name=~1), data=datLLNpeak)
+sppNPrecip2 <- lme(perN.weighted ~ Precip.tot, random=list(plot=~1, sci_name=~1), data=datLLNpeak)
 summary(sppNPrecip2)
 anova(sppNPrecip2)
 r.squaredGLMM(sppNPrecip2)
 
-ggplot(datLLNpeak, aes(x=prcp..mm.day., y=perN.weighted, color=sci_name, fill=sci_name)) +
+ggplot(datLLNpeak, aes(x=Precip.tot, y=perN.weighted, color=sci_name, fill=sci_name)) +
   geom_point() +
   stat_smooth(method="lm")
 

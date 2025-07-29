@@ -130,8 +130,6 @@ for(PLT in unique(aggLeafTrap$plot)){
   dfCollection <- data.frame(plot=PLT, trap_ID = rep(unique(datPLT$trap_ID), each=length(datePLT)),
                              date_collection=datePLT, days_collection=c(NA, daysPLT))
   
-  # allCollect <- NULL
-    
   if(is.null(allCollect)){
     allCollect <- dfCollection
   } else {
@@ -151,7 +149,7 @@ hist(allCollect$days_collection)
 length(unique(aggLeafTrap$date_collection))
 length(unique(allCollect$date_collection))
 
-
+# Checking to make sure all of our dates align
 dateLeaf <- unique(aggLeafTrap$date_collection)
 dateAll <- unique(allCollect$date_collection)
 dateLeaf[!dateLeaf %in% dateAll]
@@ -162,6 +160,7 @@ names(allCollect)
 # aggLeafTrap[aggLeafTrap$year==2022 & aggLeafTrap$date_collection<as.Date("2022-08-15")  & aggLeafTrap$plot=="B-127",]
 dim(aggLeafTrap)
 
+# dim(aggLeafTrap)
 summary(aggLeafTrap)
 aggLeafTrap <- merge(aggLeafTrap, allCollect[,c("plot", "trap_ID", "date_collection", "days_collection")], all.x=T)
 dim(aggLeafTrap)
@@ -184,6 +183,7 @@ dim(datLeaf)
 datLeaf <- merge(datLeaf, allCollect, all=T)
 datLeaf$mass_g_day <- datLeaf$mass_g/datLeaf$days_collection
 summary(datLeaf)
+tail(datLeaf[is.na(datLeaf$mass_g_day) & !is.na(datLeaf$mass_g),])
 dim(datLeaf)
 
 
