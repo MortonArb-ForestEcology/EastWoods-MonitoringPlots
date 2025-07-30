@@ -9,7 +9,8 @@ path.google <- "~/Google Drive/My Drive"
 path.litter <- file.path(path.google, "East Woods/Rollinson_Monitoring/Data/Leaf_litter_data")
 path.figs <- file.path(path.litter, "figures") # where we shoudl save some figures
 path.save <- file.path(path.litter, "LeafLitterData_Clean_forArchiving") # Where we should save the data
-path.REU <- file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter")
+#path.REU <- file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter")
+path.REU <- file.path("G:/.shortcut-targets-by-id/1q2wvODXrDo0tgOTLpFqF7TqcWoKoHZjW/URF REU 2025 - Lizer - Leaf Litter")
 
 
 # Read in Data
@@ -34,7 +35,7 @@ datLLN$week <- lubridate::week(datLLN$date_collection)
 datLLN$yday <- lubridate::yday(datLLN$date_collection)
 
 metSummer <- read.csv(file.path(path.REU,"data/daymet/daymet_June-July-August_summaries_2017-2023.csv"))
-metSummer$Precip.tot <- metSummer$Precip.tot*sum(lubridate::days_in_month(6:8))
+metSummer$Precip.tot <- metSummer$prcp..mm.day.*sum(lubridate::days_in_month(6:8))
 
 
 summary(aggLeafTrap)
@@ -138,8 +139,19 @@ anova(totDropPrecip)
 r.squaredGLMM(totDropPrecip)
 
 ggplot(weekPeakTotal, aes(x=Precip.tot, y=weekPeakWt)) +
-  geom_point() +
-  stat_smooth(method="lm")
+  geom_smooth(method="lm", se=FALSE, linewidth = 1.5, color = "#4A5D7F") +
+  geom_point(size = 2.5, color = "#4A5D7F", alpha=0.7) +
+  labs(
+    x = "Total Summer Precipitation (mm)",
+    y = "Week of Peak Leaf Drop"
+  ) +
+  theme_minimal(base_size = 18) +
+  theme(
+    axis.title = element_text(color = "#2E3033"),
+    axis.text = element_text(color = "#2E3033"),
+    axis.line = element_line(color = "#2E3033", linewidth = 0.8, linetype = "solid"),
+    legend.position = "none"
+  )
 
 totDropRainless <- lme(weekPeakWt ~ n.Rainless, random=list(plot=~1, trap_ID=~1), data=weekPeakTotal)
 summary(totDropRainless)
@@ -156,8 +168,6 @@ r.squaredGLMM(totDropTmax)
 ggplot(weekPeakTotal, aes(x=tmax..deg.c., y=weekPeakWt)) +
   geom_point() +
   stat_smooth(method="lm")
-
-
 
 totDropVPDmax <- lme(weekPeakWt ~ VPD.tmax, random=list(plot=~1, trap_ID=~1), data=weekPeakTotal)
 summary(totDropVPDmax)
@@ -208,9 +218,30 @@ summary(sppNPrecip2)
 anova(sppNPrecip2)
 r.squaredGLMM(sppNPrecip2)
 
+my_species_color_map <- c(
+  "Quercus rubra" = "#8C3F48",
+  "Quercus alba" = "#A6761D", 
+  "Acer saccharum" = "#006D6F"
+)
+
 ggplot(datLLNpeak, aes(x=Precip.tot, y=perN.weighted, color=sci_name, fill=sci_name)) +
-  geom_point() +
-  stat_smooth(method="lm")
+  geom_point(aes(color=sci_name), size = 2.5, alpha=0.7) +
+  stat_smooth(method="lm", se=FALSE, linewidth = 2, alpha=0.8) +
+  labs(
+    x = "Total Summer Precipitation (mm)",
+    y = "Nitrogen Percentage\n in Leaf Litter (%)",
+    color = "Species"
+  ) +
+  scale_color_manual(values=my_species_color_map) +
+  scale_y_continuous() +
+  scale_x_continuous() + 
+  theme_minimal(base_size = 18) +
+  theme(
+    axis.title = element_text(color = "#2E3033"),
+    axis.text = element_text(color = "#2E3033"),
+    axis.line = element_line(color = "#2E3033", linewidth = 0.8, linetype = "solid"),
+    legend.position = "none"
+  )
 
 
 summary(datLLNpeak)
@@ -219,8 +250,21 @@ datLLNpeak <- merge(datLLNpeak, weekPeakSpp[,c("year", "plot", "sci_name", "week
 summary(datLLNpeak)
 
 ggplot(datLLNpeak, aes(x=weekPeakWt, y=perN.weighted, color=sci_name, fill=sci_name)) +
-  geom_point() +
-  stat_smooth(method="lm")
+  geom_point(aes(color=sci_name), size = 3, alpha=0.7) +
+  stat_smooth(method = "lm", se= FALSE, size = 2) + 
+  labs(
+    x = "Week of Peak Leaf Drop",
+    y = "Nitrogen Percentage\nin Leaf Litter (%)",
+    color = "Species"
+  ) + 
+  scale_color_manual(values = my_species_color_map) + 
+  theme_minimal(base_size = 19) +
+  theme(
+    axis.title = element_text(color = "#2E3033"),
+    axis.text = element_text(color = "#2E3033"),
+    axis.line = element_line(color = "#2E3033", linewidth = 0.8, linetype = "solid"),
+    legend.position = "none",
+  )
 
 peakVn <- lme(perN.weighted ~ weekPeakWt, random=list(plot=~1, sci_name=~1), data=datLLNpeak)
 summary(peakVn)
@@ -230,13 +274,6 @@ r.squaredGLMM(peakVn)
 
 ########################################################################################################################################################
 #Generating prediction figures
-
-my_species_color_map <- c(
-  "Quercus rubra" = "#8C3F48",
-  "Quercus alba" = "#A6761D", 
-  "Acer saccharum" = "#006D6F"
-)
-
 
 #drought vs timing
 df_drought_peak <- data.frame(
@@ -257,8 +294,28 @@ ggplot(df_H1, aes(x = drought_severity, y = predicted_week_peak)) +
   geom_line(linewidth = 1.5, color = "#C47F4F") + 
   geom_point(size = 0, color = "#C47F4F") +
   labs(
+    x = "Stress Metric",
+    y = "Time of Leaf Drop"
+  ) +
+  scale_y_continuous(limits = c(25, 50), breaks = seq(25, 50, 5)) + 
+  scale_x_continuous(limits = c(0, 10), breaks = seq(0, 10, 2)) + 
+  theme_minimal(base_size = 22) +
+  theme(
+    axis.title = element_text(color = "#2E3033"),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "#2E3033", linewidth = 1, linetype = "solid"),
+    legend.position = "none"
+  )
+
+ggplot(df_H1, aes(x = drought_severity, y = predicted_week_peak)) +
+  geom_line(linewidth = 1.5, color = "#C47F4F") + 
+  geom_point(size = 0, color = "#C47F4F") +
+  labs(
     x = "Drought Metric",
-    y = "Week of Peak Leaf Drop"
+    y = "Time of Leaf Drop"
   ) +
   scale_y_continuous(limits = c(25, 50), breaks = seq(25, 50, 5)) + 
   scale_x_continuous(limits = c(0, 10), breaks = seq(0, 10, 2)) + 
@@ -277,11 +334,11 @@ df_H2 <- df_drought_peak %>%
   filter(Hypothesis == "Sink")
 
 ggplot(df_H2, aes(x = drought_severity, y = predicted_week_peak)) +
-  geom_line(linewidth = 1.5, color = "#6B8A7E") + 
-  geom_point(size = 0, color = "#6B8A7E") +
+  geom_line(linewidth = 1.5, color = "#3d7d4f") + 
+  geom_point(size = 0, color = "#3d7d4f") +
   labs(
     x = "Drought Metric",
-    y = "Week of Peak Leaf Drop"
+    y = "Time of Leaf Drop"
   ) +
   scale_y_continuous(limits = c(25, 50), breaks = seq(25, 50, 5)) + 
   scale_x_continuous(limits = c(0, 10), breaks = seq(0, 10, 2)) +
@@ -296,6 +353,48 @@ ggplot(df_H2, aes(x = drought_severity, y = predicted_week_peak)) +
     legend.position = "none"
   )
 
+#making it match precipitation
+ggplot(df_H1, aes(x = drought_severity, y = predicted_week_peak)) +
+  geom_line(linewidth = 1.5, color = "#3d7d4f") + 
+  geom_point(size = 0, color = "#3d7d4f") +
+  labs(
+    x = "Precipitation",
+    y = "Time of Leaf Drop"
+  ) +
+  scale_y_continuous(limits = c(25, 50), breaks = seq(25, 50, 5)) + 
+  scale_x_continuous(limits = c(0, 10), breaks = seq(0, 10, 2)) + 
+  theme_minimal(base_size = 22) +
+  theme(
+    axis.title = element_text(color = "#2E3033"),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "#2E3033", linewidth = 1, linetype = "solid"),
+    legend.position = "none"
+  )
+
+ggplot(df_H2, aes(x = drought_severity, y = predicted_week_peak)) +
+  geom_line(linewidth = 1.5, color = "#C47F4F") + 
+  geom_point(size = 0, color = "#C47F4F") +
+  labs(
+    x = "Precipitation",
+    y = "Time of Leaf Drop"
+  ) +
+  scale_y_continuous(limits = c(25, 50), breaks = seq(25, 50, 5)) + 
+  scale_x_continuous(limits = c(0, 10), breaks = seq(0, 10, 2)) + 
+  theme_minimal(base_size = 22) +
+  theme(
+    axis.title = element_text(color = "#2E3033"),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "#2E3033", linewidth = 1, linetype = "solid"),
+    legend.position = "none"
+  )
+
+
 
 
 #Nitrogen vs drought
@@ -305,7 +404,7 @@ df_drought_N <- data.frame(
 ) %>%
   mutate(
     predicted_N = case_when(
-      Hypothesis == "Stres" ~ 0.8 + (drought_severity * 0.15), 
+      Hypothesis == "Stres" ~ 0.5 + (drought_severity * 0.5), 
       Hypothesis == "Sink" ~ 2.3 - (drought_severity * 0.15)
     )
   )
@@ -338,8 +437,49 @@ df_H2N <- df_drought_N %>%
   filter(Hypothesis == "Sink")
 
 ggplot(df_H2N, aes(x = drought_severity, y = predicted_N)) +
-  geom_line(linewidth = 1.5, color = "#6B8A7E") + 
-  geom_point(size = 0, color = "#6B8A7E") +
+  geom_line(linewidth = 1.5, color = "#3d7d4f") + 
+  geom_point(size = 0, color = "#3d7d4f") +
+  labs(
+    x = "Drought Metric",
+    y = "Nitrogen Percentage\nin Leaf Litter (%)"
+  )+ 
+  scale_y_continuous(limits = c(0.5, 2.5), breaks = seq(1.0, 2.5, 0.5)) +
+  scale_x_continuous(limits = c(0, 10), breaks = seq(0, 10, 2)) + 
+  theme_minimal(base_size = 22) +
+  theme(
+    axis.title = element_text(color = "#2E3033"),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "#2E3033", linewidth = 1, linetype = "solid"),
+    legend.position = "none", 
+    axis.title.y = element_text(margin = margin(r = 8)
+    ))
+#making it match precipitation
+ggplot(df_H1N, aes(x = drought_severity, y = predicted_N)) +
+  geom_line(linewidth = 1.5, color = "#3d7d4f") + 
+  geom_point(size = 0, color = "#3d7d4f") +
+  labs(
+    x = "Precipitation",
+    y = "Nitrogen Percentage\nin Leaf Litter (%)"
+  ) +
+  scale_y_continuous(limits = c(0.5, 2.5), breaks = seq(1.0, 2.5, 0.5)) +
+  scale_x_continuous(limits = c(0, 10), breaks = seq(0, 10, 2)) +
+  theme_minimal(base_size = 22) +
+  theme(
+    axis.title = element_text(color = "#2E3033"),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "#2E3033", linewidth = 1, linetype = "solid"),
+    legend.position = "none", 
+    axis.title.y = element_text(margin = margin(r = 8)
+    ))
+ggplot(df_H2N, aes(x = drought_severity, y = predicted_N)) +
+  geom_line(linewidth = 1.5, color = "#C47F4F") + 
+  geom_point(size = 0, color = "#C47F4F") +
   labs(
     x = "Drought Metric",
     y = "Nitrogen Percentage\nin Leaf Litter (%)"
@@ -360,6 +500,7 @@ ggplot(df_H2N, aes(x = drought_severity, y = predicted_N)) +
 
 
 
+
 #Nitrogen vs Timing
 df_peak_nitrogen <- data.frame(
   week_peak = seq(40, 50, by = 0.5)
@@ -372,7 +513,7 @@ ggplot(df_peak_nitrogen, aes(x = week_peak, y = predicted_N_percent)) +
   geom_line(linewidth = 1.5, color = "#4A5D7F") + 
   geom_point(size = 0, color = "#4A5D7F") +
   labs(
-    x = "Week of Peak Leaf Drop",
+    x = "Time of Leaf Drop",
     y = "Nitrogen Percentage\nin Leaf Litter (%)"
   ) +
   scale_y_continuous(limits = c(1.0, 2.5), breaks = seq(1.0, 2.5, 0.5)) +
