@@ -355,3 +355,49 @@ ggplot(data = ba_genus_change, aes(x = IMLS_Plot, y = BA_diff, fill = Genus)) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
   scale_fill_brewer(type = "qual", palette = "Set3")
 
+
+####Dead stuff--
+
+# Filter for trees that were alive in 2018 but not in 2025
+dat.dead <- allplots[allplots$`2018 Status` == "Alive" & 
+                       allplots$`2025 Canopy Class` == "DEAD" &
+                       !is.na(allplots$`2018 DBH`) & 
+                       allplots$`2018 DBH` != "", ]
+
+# Convert 2018 DBH to numeric more safely
+dat.dead$`2018 DBH` <- as.numeric(sapply(dat.dead$`2018 DBH`, function(x) {
+  if(is.null(x) || x == "" || x == " ") {
+    return(NA)
+  } else {
+    return(x)
+  }
+}))
+
+# Remove any remaining NA values in DBH
+dat.dead <- dat.dead[!is.na(dat.dead$`2018 DBH`), ]
+
+#  2018 DBH of dead trees faceted by plot
+ggplot(data = dat.dead, aes(x = `2018 DBH`)) +
+  geom_histogram(binwidth = 2, fill = "red3", alpha = 0.7, color = "black") +
+  facet_wrap(~ IMLS_Plot, scales = "free_y") +
+  labs(x = "2018 DBH (cm)", 
+       y = "Number of Dead Trees", 
+       title = "Distribution of Dead Trees by 2018 DBH") +
+  theme_minimal() +
+  theme(strip.text = element_text(face = "bold"),
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
+  geom_vline(xintercept = mean(dat.dead$`2018 DBH`, na.rm = TRUE), 
+             linetype = "dashed", color = "blue", alpha = 0.7)
+
+#2018 DBH of dead trees faceted by species 
+ggplot(data = dat.dead, aes(x = `2018 DBH`)) +
+  geom_histogram(binwidth = 2, fill = "red3", alpha = 0.7, color = "black") +
+  facet_wrap(~ Sp_code, scales = "free_y") +
+  labs(x = "2018 DBH (cm)", 
+       y = "Number of Dead Trees", 
+       title = "Distribution of Species of Dead Trees by 2018 DBH ") +
+  theme_minimal() +
+  theme(strip.text = element_text(face = "bold"),
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
+  geom_vline(xintercept = mean(dat.dead$`2018 DBH`, na.rm = TRUE), 
+             linetype = "dashed", color = "blue", alpha = 0.7)
