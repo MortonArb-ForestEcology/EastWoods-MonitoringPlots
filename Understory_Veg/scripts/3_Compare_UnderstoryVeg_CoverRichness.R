@@ -176,8 +176,98 @@ cowplot::plot_grid(plot.cover, yr.hprime, plot.richness, yr.richness, ncol=2, re
 dev.off()
 
 ####################################
+# Doing some quick graphs of number of flowering species through time
+####################################3
+flower.summary <- aggregate(Cover ~ Plot + Subplot + Obs.Date + year + yday, data=dat.veg[dat.veg$Flowers.Open==T,], FUN=length)
+names(flower.summary)[names(flower.summary)=="Cover"] <- "Richness"
+# flower.summary$Richness <- aggregate(Cover ~ Plot + Subplot + Obs.Date + year + yday, data=dat.veg, FUN=length)$Cover
+summary(flower.summary)
+
+# Add in missing 2020 dates
+
+flower.summary$Plot <- factor(flower.summary$Plot, levels=plotOrder)
+flower.graph <- (flower.summary$year!=2020 ) | (flower.summary$year==2020 & flower.summary$Obs.Date>as.Date("2020-05-01") )
+
+
+flower.summaryPlot <- aggregate(Cover ~ Plot + Obs.Date + year + yday, data=dat.veg[dat.veg$Flowers.Open==T,], FUN=length)
+names(flower.summaryPlot)[names(flower.summaryPlot)=="Cover"] <- "Richness"
+# flower.summary$Richness <- aggregate(Cover ~ Plot + Subplot + Obs.Date + year + yday, data=dat.veg, FUN=length)$Cover
+summary(flower.summaryPlot)
+
+# Add in missing 2020 dates
+
+flower.summaryPlot$Plot <- factor(flower.summaryPlot$Plot, levels=plotOrder)
+flowerPlot.graph <- (flower.summaryPlot$year!=2020 ) | (flower.summaryPlot$year==2020 & flower.summaryPlot$Obs.Date>as.Date("2020-05-01") )
+
+
+
+plot.richnessFlower <- ggplot(data=flower.summary[flower.graph,], aes(x=Obs.Date, y=Richness)) +
+  # facet_wrap(~Plot) +
+  geom_ribbon(data=flower.summary[flower.summary$year<2020,], aes(fill=Plot), stat="summary", fun.ymin=min, fun.ymax=max, alpha=0.5) +
+  geom_line(data=flower.summary[flower.summary$year<2020 ,], aes(color=Plot)) +
+  geom_ribbon(data=flower.summary[flower.summary$year==2020 & flower.summary$Obs.Date>as.Date("2020-05-01"),], aes(fill=Plot), stat="summary", fun.ymin=min, fun.ymax=max, alpha=0.5) +
+  geom_line(data=flower.summary[flower.summary$year==2020 & flower.summary$Obs.Date>as.Date("2020-05-01"),], aes(color=Plot), stat="summary", fun.y=mean) +
+  geom_ribbon(data=flower.summary[flower.summary$year>2020,], aes(fill=Plot), stat="summary", fun.ymin=min, fun.ymax=max, alpha=0.5) +
+  geom_line(data=flower.summary[flower.summary$year>2020 ,], aes(color=Plot), stat="summary", fun.y=mean) +
+  labs(x="Observation Date", y="Species Richness") +
+  scale_fill_manual(values=ewPlotColors) +
+  scale_color_manual(values=ewPlotColors) +
+  theme_linedraw() + theme.meghan + theme(legend.position="right")
+
+plot.richnessFlower
+
+
+plot.richnessFlowerDOY <- ggplot(data=flower.summary[flower.graph,], aes(x=yday, y=Richness, group=as.factor(year))) +
+  facet_wrap(.~Plot, drop=T) +
+  geom_ribbon(aes(fill="Past"), stat="summary", fun.ymin=min, fun.ymax=max, alpha=0.5) +
+  geom_line(aes(color="Past"), stat="summary", fun.y=mean) +
+  geom_ribbon(data=flower.summary[flower.summary$year==max(flower.summary$year) & !is.na(flower.summary$Plot),], aes(fill="This Year"), stat="summary", fun.ymin=min, fun.ymax=max, alpha=0.5) +
+  geom_line(data=flower.summary[flower.summary$year==max(flower.summary$year) & !is.na(flower.summary$Plot),], aes(color="This Year"), stat="summary", fun.y=mean, linewidth=1.5) +
+  labs(x="Observation Date", y="Species Richness") +
+  scale_fill_manual(values=c("Past"="gray50", "This Year"="forestgreen")) +
+  scale_color_manual(values=c("Past"="gray50", "This Year"="forestgreen")) +
+  theme_linedraw() + theme.meghan + theme(legend.position="right")
+
+png(file.path(path.figs, "UnderstoryVegetation_Flower_Richness_v2.png"), height=6, width=12, units="in", res=220)
+plot.richnessFlowerDOY
+dev.off()
+
+
+
+
+plot.richnessFlowerPlot <- ggplot(data=flower.summaryPlot[flowerPlot.graph,], aes(x=Obs.Date, y=Richness)) +
+  # facet_wrap(~Plot) +
+  geom_ribbon(data=flower.summaryPlot[flower.summaryPlot$year<2020,], aes(fill=Plot), stat="summary", fun.ymin=min, fun.ymax=max, alpha=0.5) +
+  geom_line(data=flower.summaryPlot[flower.summaryPlot$year<2020 ,], aes(color=Plot)) +
+  geom_line(data=flower.summaryPlot[flower.summaryPlot$year==2020 & flower.summaryPlot$Obs.Date>as.Date("2020-05-01"),], aes(color=Plot), stat="summary", fun.y=mean) +
+  geom_line(data=flower.summaryPlot[flower.summaryPlot$year>2020 ,], aes(color=Plot), stat="summary", fun.y=mean) +
+  labs(x="Observation Date", y="Species Richness") +
+  scale_fill_manual(values=ewPlotColors) +
+  scale_color_manual(values=ewPlotColors) +
+  theme_linedraw() + theme.meghan + theme(legend.position="right")
+
+
+plot.richnessFlowerDOYplot <- ggplot(data=flower.summaryPlot[flowerPlot.graph,], aes(x=yday, y=Richness, group=as.factor(year))) +
+  facet_wrap(.~Plot, drop=T) +
+  geom_ribbon(aes(fill="Past"), stat="summary", fun.ymin=min, fun.ymax=max, alpha=0.5) +
+  geom_line(aes(color="Past"), stat="summary", fun.y=mean) +
+  geom_ribbon(data=flower.summaryPlot[flower.summaryPlot$year==max(flower.summaryPlot$year) ,], aes(fill="This Year"), stat="summary", fun.ymin=min, fun.ymax=max, alpha=0.5) +
+  geom_line(data=flower.summaryPlot[flower.summaryPlot$year==max(flower.summary$year) ,], aes(color="This Year"), stat="summary", fun.y=mean, linewidth=1.5) +
+  labs(x="Observation Date", y="Species Richness") +
+  scale_fill_manual(values=c("Past"="gray50", "This Year"="forestgreen")) +
+  scale_color_manual(values=c("Past"="gray50", "This Year"="forestgreen")) +
+  theme_linedraw() + theme.meghan + theme(legend.position="right")
+plot.richnessFlowerDOYplot
+
+png(file.path(path.figs, "UnderstoryVegetation_Flower_Richness_v3-plot.png"), height=6, width=12, units="in", res=220)
+plot.richnessFlowerDOYplot
+dev.off()
+
+
+####################################
 # Begin playing with the phenology data, but nothing really clear
 ####################################3
+
 
 veg.long <- stack(dat.veg[,c("Initial.Growth", "Leaves.Present", "Leaves.Colored", "Flowers.Buds", "Flowers.Open", "Fruits.Present", "Fruits.Ripe", "Fruits.Drop")])
 names(veg.long) <- c("Pheno.Status","Phenophase")

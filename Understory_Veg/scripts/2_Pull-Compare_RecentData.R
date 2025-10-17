@@ -64,6 +64,7 @@ length(unique(dat.veg$GenusSpecies[!grepl("UNKNOWN", dat.veg$GenusSpecies)]))
 # # # # # # # # # # # # # # # # # # # # # 
 # Load the understory data for this year
 googlesheets4::gs4_auth(email="crollinson@mortonarb.org")
+# datNow <- get.understory(YEAR=2024)
 datNow <- get.understory(YEAR=lubridate::year(Sys.Date()))
 datNow <- datNow[datNow$Name.Common!="NOTHING" & datNow$Cover>0 & !is.na(datNow$Phenophase.Codes),]
 summary(datNow)
