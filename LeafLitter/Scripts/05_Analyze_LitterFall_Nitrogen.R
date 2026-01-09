@@ -5,13 +5,11 @@ library(emmeans) # will et us do a multi-comparisons test
 library(MuMIn)
 
 # Set up file paths etc. --> this should also indicate where you can find these files!
-path.google <- "~/Google Drive/My Drive"
+path.google <- "~/Google Drive/My Drive/REU 2025 - Morton Arboretum Leaf Litter"
 path.litter <- file.path(path.google, "East Woods/Rollinson_Monitoring/Data/Leaf_litter_data")
 path.figs <- file.path(path.litter, "figures") # where we shoudl save some figures
 path.save <- file.path(path.litter, "LeafLitterData_Clean_forArchiving") # Where we should save the data
-#path.REU <- file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter")
-path.REU <- file.path("G:/.shortcut-targets-by-id/1q2wvODXrDo0tgOTLpFqF7TqcWoKoHZjW/URF REU 2025 - Lizer - Leaf Litter")
-
+path.REU <- file.path("~/Library/CloudStorage/GoogleDrive-lizer1@stolaf.edu/.shortcut-targets-by-id/1q2wvODXrDo0tgOTLpFqF7TqcWoKoHZjW/URF-REU 2025 - Lizer - Leaf Litter")
 
 # Read in Data
 aggLeafTrap <- read.csv(file.path(path.REU, "LeafLitter_byTrap_latest.csv"))
@@ -270,6 +268,10 @@ peakVn <- lme(perN.weighted ~ weekPeakWt, random=list(plot=~1, sci_name=~1), dat
 summary(peakVn)
 anova(peakVn)
 r.squaredGLMM(peakVn)
+
+write.csv(datLLNpeak, file.path(path.REU, "LeafLitter_peak_integrated_TimingNDrought.csv"), row.names=F)
+write.csv(datLLNmerge, file.path(path.REU, "LeafLitter_combined_TimingNDrought.csv"), row.names=F)
+
 
 
 ########################################################################################################################################################
