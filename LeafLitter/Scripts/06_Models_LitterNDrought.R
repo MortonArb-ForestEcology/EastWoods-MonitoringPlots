@@ -81,6 +81,13 @@ r.squaredGLMM(sppNPrecip)
 shapiro.test(resid(sppNPrecip))
 qqnorm(resid(sppNPrecip))
 
+spplogNPrecip <- lme(log(perN.weighted)~ Precip.tot*sci_name, random=list(plot=~1), data=datLLNpeak)
+summary(spplogNPrecip)
+anova(spplogNPrecip)
+r.squaredGLMM(spplogNPrecip)
+shapiro.test(resid(spplogNPrecip))
+qqnorm(resid(spplogNPrecip))
+
 sppCPrecip <- lme(perC.weighted ~ Precip.tot*sci_name, random=list(plot=~1), data=datLLNpeak)
 summary(sppCPrecip)
 anova(sppCPrecip)
@@ -103,6 +110,20 @@ r.squaredGLMM(NPrecip_forest)
 shapiro.test(resid(NPrecip_forest))
 qqnorm(resid(NPrecip_forest))
 
+logNPrecip_forest <- lme(log(perN.weighted) ~ Precip.tot, random=list(plot=~1), data=datLLNpeak)
+summary(logNPrecip_forest)
+anova(logNPrecip_forest)
+r.squaredGLMM(logNPrecip_forest)
+shapiro.test(resid(logNPrecip_forest))
+qqnorm(resid(logNPrecip_forest))
+
+sqrtNPrecip_forest <- lme(sqrt(perN.weighted) ~ Precip.tot, random=list(plot=~1), data=datLLNpeak)
+summary(sqrtNPrecip_forest)
+anova(sqrtNPrecip_forest)
+r.squaredGLMM(sqrtNPrecip_forest)
+shapiro.test(resid(sqrtNPrecip_forest))
+qqnorm(resid(sqrtNPrecip_forest))
+
 CPrecip_forest <- lme(perC.weighted ~ Precip.tot, random=list(plot=~1), data=datLLNpeak)
 summary(CPrecip_forest)
 anova(CPrecip_forest)
@@ -116,10 +137,46 @@ qqnorm(resid(CPrecip_forest))
 #############################
 #3: Selecting drought variables (thanks leah for code inspo)
 Nprecip <- lme(perN.weighted ~ Precip.tot, random=list(plot=~1), data=datLLNpeak)
+shapiro.test(resid(Nprecip))
+qqnorm(resid(Nprecip))
+
 NVPD<- lme(perN.weighted ~ VPD.avg, random=list(plot=~1), data=datLLNpeak)
+shapiro.test(resid(NVPD))
+qqnorm(resid(NVPD))
+
 Nrainless <- lme(perN.weighted ~ n.Rainless, random=list(plot=~1), data=datLLNpeak)
+shapiro.test(resid(Nrainless))
+qqnorm(resid(Nrainless))
+
 Nrainlessconsec <- lme(perN.weighted ~ RainlessConsec.max, random=list(plot=~1), data=datLLNpeak)
+shapiro.test(resid(Nrainlessconsec))
+qqnorm(resid(Nrainlessconsec))
+
 Nprecipday <- lme(perN.weighted ~ prcp..mm.day., random=list(plot=~1), data=datLLNpeak)
+shapiro.test(resid(Nprecipday))
+qqnorm(resid(Nprecipday))
+
+
+DropPrecip <- lme(weekPeakWt ~ Precip.tot, random=list(plot=~1), data=weekPeakSpp)
+shapiro.test(resid(DropPrecip))
+qqnorm(resid(DropPrecip))
+
+DropVPD <- lme(weekPeakWt ~ VPD.avg, random=list(plot=~1), data=weekPeakSpp)
+shapiro.test(resid(DropVPD))
+qqnorm(resid(DropVPD))
+
+Droprainless <- lme(weekPeakWt ~ n.Rainless, random=list(plot=~1), data=weekPeakSpp)
+shapiro.test(resid(Droprainless))
+qqnorm(resid(Droprainless))
+
+Droprainlessconsec <- lme(weekPeakWt ~ RainlessConsec.max, random=list(plot=~1), data=weekPeakSpp)
+shapiro.test(resid(Droprainlessconsec))
+qqnorm(resid(Droprainlessconsec))
+
+Dropprecipday <- lme(weekPeakWt ~ prcp..mm.day., random=list(plot=~1), data=datLLNpeak)
+shapiro.test(resid(Dropprecipday))
+qqnorm(resid(Dropprecipday))
+
 
 get_stats <- function(model, name) {
   r2 <- r.squaredGLMM(model)
@@ -128,13 +185,6 @@ get_stats <- function(model, name) {
     AIC = AIC(model),
     R2_Marginal = r2[1],
     R2_Conditional = r2[2])}
-
-DropPrecip <- lme(weekPeakWt ~ Precip.tot, random=list(plot=~1), data=weekPeakSpp)
-DropVPD <- lme(weekPeakWt ~ VPD.avg, random=list(plot=~1), data=weekPeakSpp)
-Droprainless <- lme(weekPeakWt ~ n.Rainless, random=list(plot=~1), data=weekPeakSpp)
-Droprainlessconsec <- lme(weekPeakWt ~ RainlessConsec.max, random=list(plot=~1), data=weekPeakSpp)
-Dropprecipday <- lme(weekPeakWt ~ prcp..mm.day., random=list(plot=~1), data=datLLNpeak)
-
 
 Ncombined <- lme(perN.weighted ~ Precip.tot + RainlessConsec.max, 
                   random = list(plot = ~1), 
@@ -171,3 +221,5 @@ print(Dropmodelcomparison)
 #############################
 
 #4: Structural Equations Model
+
+
