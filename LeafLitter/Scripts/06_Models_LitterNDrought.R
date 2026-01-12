@@ -109,6 +109,7 @@ anova(NPrecip_forest)
 r.squaredGLMM(NPrecip_forest)
 shapiro.test(resid(NPrecip_forest))
 qqnorm(resid(NPrecip_forest))
+hist(resid(NPrecip_forest))
 
 logNPrecip_forest <- lme(log(perN.weighted) ~ Precip.tot, random=list(plot=~1), data=datLLNpeak)
 summary(logNPrecip_forest)
@@ -131,49 +132,52 @@ r.squaredGLMM(CPrecip_forest)
 shapiro.test(resid(CPrecip_forest))
 qqnorm(resid(CPrecip_forest))
 
-#other models just to have in one place
-
 
 #############################
 #3: Selecting drought variables (thanks leah for code inspo)
-Nprecip <- lme(perN.weighted ~ Precip.tot, random=list(plot=~1), data=datLLNpeak)
+Nprecip <- lme(perN.weighted ~ Precip.tot, random=list(sci_name=~1, plot=~1), data=datLLNpeak)
 shapiro.test(resid(Nprecip))
 qqnorm(resid(Nprecip))
 
-NVPD<- lme(perN.weighted ~ VPD.avg, random=list(plot=~1), data=datLLNpeak)
+NVPD<- lme(perN.weighted ~ VPD.avg, random=list(sci_name=~1, plot=~1), data=datLLNpeak)
 shapiro.test(resid(NVPD))
 qqnorm(resid(NVPD))
 
-Nrainless <- lme(perN.weighted ~ n.Rainless, random=list(plot=~1), data=datLLNpeak)
+Nrainless <- lme(perN.weighted ~ n.Rainless, random=list(sci_name=~1, plot=~1), data=datLLNpeak)
 shapiro.test(resid(Nrainless))
 qqnorm(resid(Nrainless))
 
-Nrainlessconsec <- lme(perN.weighted ~ RainlessConsec.max, random=list(plot=~1), data=datLLNpeak)
+Nrainlessconsec <- lme(perN.weighted ~ RainlessConsec.max, random=list(sci_name=~1, plot=~1), data=datLLNpeak)
 shapiro.test(resid(Nrainlessconsec))
 qqnorm(resid(Nrainlessconsec))
 
-Nprecipday <- lme(perN.weighted ~ prcp..mm.day., random=list(plot=~1), data=datLLNpeak)
+Nprecipday <- lme(perN.weighted ~ prcp..mm.day., random=list(sci_name=~1, plot=~1), data=datLLNpeak)
 shapiro.test(resid(Nprecipday))
 qqnorm(resid(Nprecipday))
 
 
-DropPrecip <- lme(weekPeakWt ~ Precip.tot, random=list(plot=~1), data=weekPeakSpp)
+DropPrecip <- lme(weekPeakWt ~ Precip.tot, random=list(sci_name=~1, plot=~1), data=datLLNpeak)
 shapiro.test(resid(DropPrecip))
 qqnorm(resid(DropPrecip))
+hist(resid(DropPrecip))
+hist(datLLNpeak$weekPeakWt)
+hist(datLLNpeak$Precip.tot)
+# head(weekPeakSpp)
 
-DropVPD <- lme(weekPeakWt ~ VPD.avg, random=list(plot=~1), data=weekPeakSpp)
+
+DropVPD <- lme(weekPeakWt ~ VPD.avg, random=list(sci_name=~1, plot=~1), data=datLLNpeak)
 shapiro.test(resid(DropVPD))
 qqnorm(resid(DropVPD))
 
-Droprainless <- lme(weekPeakWt ~ n.Rainless, random=list(plot=~1), data=weekPeakSpp)
+Droprainless <- lme(weekPeakWt ~ n.Rainless, random=list(sci_name=~1, plot=~1), data=datLLNpeak)
 shapiro.test(resid(Droprainless))
 qqnorm(resid(Droprainless))
 
-Droprainlessconsec <- lme(weekPeakWt ~ RainlessConsec.max, random=list(plot=~1), data=weekPeakSpp)
+Droprainlessconsec <- lme(weekPeakWt ~ RainlessConsec.max, random=list(sci_name=~1, plot=~1), data=datLLNpeak)
 shapiro.test(resid(Droprainlessconsec))
 qqnorm(resid(Droprainlessconsec))
 
-Dropprecipday <- lme(weekPeakWt ~ prcp..mm.day., random=list(plot=~1), data=datLLNpeak)
+Dropprecipday <- lme(weekPeakWt ~ prcp..mm.day., random=list(sci_name=~1, plot=~1), data=datLLNpeak)
 shapiro.test(resid(Dropprecipday))
 qqnorm(resid(Dropprecipday))
 
@@ -187,13 +191,13 @@ get_stats <- function(model, name) {
     R2_Conditional = r2[2])}
 
 Ncombined <- lme(perN.weighted ~ Precip.tot + RainlessConsec.max, 
-                  random = list(plot = ~1), 
+                  random = list(sci_name=~1, plot = ~1), 
                   data = datLLNpeak)
 summary(Ncombined)
 r.squaredGLMM(Ncombined)
 
 Dropcombined <- lme(weekPeakWt ~ Precip.tot + RainlessConsec.max, 
-                                  random = list(plot = ~1), 
+                                  random = list(sci_name=~1, plot = ~1), 
                                   data = weekPeakSpp)
 summary(Dropcombined)
 r.squaredGLMM(Dropcombined)
@@ -219,7 +223,25 @@ Dropmodelcomparison <- rbind(
 print(Dropmodelcomparison)
 
 #############################
-
 #4: Structural Equations Model
+
+#showing that I want to test N + timing AND N + weather
+library(multcomp)
+library(multcompView)
+library(piecewiseSEM)
+library(lme4)
+library(lmerTest)
+
+Nprecip_linked <- lme(perN.weighted ~ Precip.tot + weekPeakWt, random = list(sci_name = ~1, plot = ~1), data = datLLNpeak)
+
+forest_sem <- psem(DropPrecip, Nprecip_linked)
+summary(forest_sem)
+
+
+spNPrecip_linked <- lmer(perN.weighted ~ Precip.tot*sci_name + weekPeakWt*sci_name + (1 | plot), data = datLLNpeak)
+spDropPrecip <- lmer(weekPeakWt ~ Precip.tot * sci_name + (1 | plot), data = datLLNpeak)
+
+spec_SEM <- psem(spDropPrecip, spNPrecip_linked)
+summary(spec_SEM, standardize = "none")
 
 
