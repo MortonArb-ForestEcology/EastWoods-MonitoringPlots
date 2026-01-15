@@ -19,7 +19,7 @@ datLLNpeak <- read.csv(file.path(path.REU, "LeafLitter_peak_integrated_TimingNDr
 summary(datLLNpeak)
 str(datLLNpeak)
 
-datLLNmerge <- read.csv(file.path(path.REU, "LeafLitter_combined_TimingN.csv"))
+datLLNmerge <- read.csv(file.path(path.REU, "LeafLitter_combined_TimingNDrought.csv"))
 #^^maintains individual entries for each collection
 summary(datLLNmerge)
 str(datLLNmerge)
@@ -103,7 +103,7 @@ r.squaredGLMM(CNPrecip_forest)
 shapiro.test(resid(CNPrecip_forest))
 qqnorm(resid(CNPrecip_forest))
 
-NPrecip_forest <- lme(perN.weighted ~ Precip.tot, random=list(plot=~1), data=datLLNpeak)
+NPrecip_forest <- lme(perN.weighted ~ Precip.tot, random=list(plot=~1, sci_name=~1), data=datLLNpeak)
 summary(NPrecip_forest)
 anova(NPrecip_forest)
 r.squaredGLMM(NPrecip_forest)
@@ -157,6 +157,9 @@ qqnorm(resid(Nprecipday))
 
 
 DropPrecip <- lme(weekPeakWt ~ Precip.tot, random=list(sci_name=~1, plot=~1), data=datLLNpeak)
+summary(DropPrecip)
+anova(DropPrecip)
+r.squaredGLMM(DropPrecip)
 shapiro.test(resid(DropPrecip))
 qqnorm(resid(DropPrecip))
 hist(resid(DropPrecip))
@@ -198,7 +201,7 @@ r.squaredGLMM(Ncombined)
 
 Dropcombined <- lme(weekPeakWt ~ Precip.tot + RainlessConsec.max, 
                                   random = list(sci_name=~1, plot = ~1), 
-                                  data = weekPeakSpp)
+                                  data = datLLNpeak)
 summary(Dropcombined)
 r.squaredGLMM(Dropcombined)
 
@@ -240,8 +243,85 @@ summary(forest_sem)
 
 spNPrecip_linked <- lmer(perN.weighted ~ Precip.tot*sci_name + weekPeakWt*sci_name + (1 | plot), data = datLLNpeak)
 spDropPrecip <- lmer(weekPeakWt ~ Precip.tot * sci_name + (1 | plot), data = datLLNpeak)
+summary(spDropPrecip)
+anova(spDropPrecip)
+r.squaredGLMM(spDropPrecip)
 
 spec_SEM <- psem(spDropPrecip, spNPrecip_linked)
 summary(spec_SEM, standardize = "none")
 
 
+
+############################
+#Important Models rn
+NPrecip_forest <- lme(perN.weighted ~ Precip.tot, random=list(plot=~1, sci_name=~1), data=datLLNpeak)
+summary(NPrecip_forest)
+anova(NPrecip_forest)
+r.squaredGLMM(NPrecip_forest)
+
+sppNPrecip <- lme(perN.weighted ~ Precip.tot*sci_name, random=list(plot=~1), data=datLLNpeak)
+summary(sppNPrecip)
+anova(sppNPrecip)
+r.squaredGLMM(sppNPrecip)
+
+DropPrecip <- lme(weekPeakWt ~ Precip.tot, random=list(sci_name=~1, plot=~1), data=datLLNpeak)
+summary(DropPrecip)
+anova(DropPrecip)
+r.squaredGLMM(DropPrecip)
+
+spDropPrecip <- lme(weekPeakWt ~ Precip.tot * sci_name, random=list(plot=~1), data = datLLNpeak)
+summary(spDropPrecip)
+anova(spDropPrecip)
+r.squaredGLMM(spDropPrecip)
+
+###########################
+#Weirdness when I added in 2019, investigating outlier
+
+datLLNpeak[which.max(resid(NPrecip_forest, type = "pearson")), ]
+
+dat_no_outlier <- datLLNpeak[-13, ]
+
+NPrecip_no_outlier <- lme(perN.weighted ~ Precip.tot, random = list(plot = ~1, sci_name = ~1), data = dat_no_outlier)
+summary(NPrecip_no_outlier)
+r.squaredGLMM(NPrecip_no_outlier)
+
+ggplot(datLLNpeak, aes(x = weekPeakWt, y = perN.weighted, color = sci_name)) +
+  geom_point(alpha =0.6) +
+  geom_smooth(method ="lm", se=F) +
+  facet_wrap(~year) + 
+  #coord_cartesian(xlim=c(270,340)) +
+  theme_minimal()
+
+ggplot(dat_no_outlier, aes(x = weekPeakWt, y = perN.weighted, color = sci_name)) +
+  geom_point(alpha =0.6) +
+  geom_smooth(method ="lm", se=F) +
+  facet_wrap(~year) + 
+  #coord_cartesian(xlim=c(270,340)) +
+  theme_minimal()
+
+no_2019 <- datLLNpeak[datLLNpeak$year!=2019,]
+
+no2019_Nprecip <- lme(perN.weighted ~ Precip.tot, random=list(plot=~1, sci_name=~1), data=no_2019)
+summary(no2019_Nprecip)
+anova(no2019_Nprecip)
+r.squaredGLMM(no2019_Nprecip)
+no_2019[which.max(resid(no2019_Nprecip, type = "pearson")), ]
+
+
+#ok so there's still a suspiciously low p-value and visualizing makes it look like theres some missing data points...
+expected_years <- unique(datLLNpeak$year)
+expected_plots <- c("B-127", "U-134", "N-115", "HH-115")
+expected_species <- c("Acer saccharum", "Quercus alba", "Quercus rubra")
+
+all_expected <- expand.grid(year = expected_years, plot = expected_plots, sci_name = expected_species)
+
+missing_points <-anti_join(all_expected, datLLNpeak, by = c("year","plot","sci_name"))
+print(missing_points)
+
+
+##I wrote down the p-value for this before I added 2019 so this can be a check
+DropPrecip <- lme(weekPeakWt ~ Precip.tot, random=list(sci_name=~1, plot=~1), data=no_2019)
+Nprecip_linked <- lme(perN.weighted ~ Precip.tot + weekPeakWt, random = list(sci_name = ~1, plot = ~1), data = no_2019)
+
+no_2019_sem <- psem(DropPrecip, Nprecip_linked)
+summary(no_2019_sem)
