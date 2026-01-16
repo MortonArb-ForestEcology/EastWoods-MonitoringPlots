@@ -13,7 +13,7 @@ path.save <- file.path(path.litter, "LeafLitterData_Clean_forArchiving") # Where
 path.REU <- file.path("~/Library/CloudStorage/GoogleDrive-lizer1@stolaf.edu/.shortcut-targets-by-id/1q2wvODXrDo0tgOTLpFqF7TqcWoKoHZjW/URF-REU 2025 - Lizer - Leaf Litter")
 
 
-#1: Load data and verify variables
+#1: Load data and verify variables ----
 datLLNpeak <- read.csv(file.path(path.REU, "LeafLitter_peak_integrated_TimingNDrought.csv"))
 #^^all weeks collapsed into a single annual value per plot (weighted peak week)
 summary(datLLNpeak)
@@ -25,8 +25,7 @@ summary(datLLNmerge)
 str(datLLNmerge)
 
 ###########################################################
-
-#2: Stoich
+#2: Stoich EDA  ----
 ggplot(datLLNmerge, aes(x = yday, y = X.N, color = sci_name)) +
   geom_point(alpha =0.6) +
   geom_smooth(method ="loess", se=F) +
@@ -134,7 +133,7 @@ qqnorm(resid(CPrecip_forest))
 
 
 #############################
-#3: Selecting drought variables (thanks leah for code inspo)
+#3: Selecting drought variables (thanks leah for code inspo) ----
 Nprecip <- lme(perN.weighted ~ Precip.tot, random=list(sci_name=~1, plot=~1), data=datLLNpeak)
 shapiro.test(resid(Nprecip))
 qqnorm(resid(Nprecip))
@@ -226,7 +225,7 @@ Dropmodelcomparison <- rbind(
 print(Dropmodelcomparison)
 
 #############################
-#4: Structural Equations Model
+#4: Structural Equations Model ----
 
 #showing that I want to test N + timing AND N + weather
 library(multcomp)
@@ -251,39 +250,20 @@ spec_SEM <- psem(spDropPrecip, spNPrecip_linked)
 summary(spec_SEM, standardize = "none")
 
 
-
-############################
-#Important Models rn
-NPrecip_forest <- lme(perN.weighted ~ Precip.tot, random=list(plot=~1, sci_name=~1), data=datLLNpeak)
-summary(NPrecip_forest)
-anova(NPrecip_forest)
-r.squaredGLMM(NPrecip_forest)
-
-sppNPrecip <- lme(perN.weighted ~ Precip.tot*sci_name, random=list(plot=~1), data=datLLNpeak)
-summary(sppNPrecip)
-anova(sppNPrecip)
-r.squaredGLMM(sppNPrecip)
-
-DropPrecip <- lme(weekPeakWt ~ Precip.tot, random=list(sci_name=~1, plot=~1), data=datLLNpeak)
-summary(DropPrecip)
-anova(DropPrecip)
-r.squaredGLMM(DropPrecip)
-
-spDropPrecip <- lme(weekPeakWt ~ Precip.tot * sci_name, random=list(plot=~1), data = datLLNpeak)
-summary(spDropPrecip)
-anova(spDropPrecip)
-r.squaredGLMM(spDropPrecip)
-
 ###########################
-#Weirdness when I added in 2019, investigating outlier
+#Weirdness when I added in 2019, investigating outlier ----
 
 datLLNpeak[which.max(resid(NPrecip_forest, type = "pearson")), ]
 
 dat_no_outlier <- datLLNpeak[-13, ]
 
-NPrecip_no_outlier <- lme(perN.weighted ~ Precip.tot, random = list(plot = ~1, sci_name = ~1), data = dat_no_outlier)
+NPrecip_no_outlier <- lme(perN.weighted ~ Precip.tot, random = list(sci_name = ~1, plot = ~1), data = dat_no_outlier)
 summary(NPrecip_no_outlier)
 r.squaredGLMM(NPrecip_no_outlier)
+
+NTime_no_outlier <- lme(perN.weighted ~ weekPeakWt, random = list(sci_name = ~1, plot = ~1), data = dat_no_outlier)
+summary(NTime_no_outlier)
+r.squaredGLMM(NTime_no_outlier)
 
 ggplot(datLLNpeak, aes(x = weekPeakWt, y = perN.weighted, color = sci_name)) +
   geom_point(alpha =0.6) +
@@ -292,10 +272,11 @@ ggplot(datLLNpeak, aes(x = weekPeakWt, y = perN.weighted, color = sci_name)) +
   #coord_cartesian(xlim=c(270,340)) +
   theme_minimal()
 
-ggplot(dat_no_outlier, aes(x = weekPeakWt, y = perN.weighted, color = sci_name)) +
+ggplot(dat_no_outlier, aes(x = Precip.tot, y = perN.weighted, color = sci_name)) +
   geom_point(alpha =0.6) +
   geom_smooth(method ="lm", se=F) +
-  facet_wrap(~year) + 
+ # facet_wrap(~plot)
+ facet_wrap(~year) + 
   #coord_cartesian(xlim=c(270,340)) +
   theme_minimal()
 
@@ -318,10 +299,154 @@ all_expected <- expand.grid(year = expected_years, plot = expected_plots, sci_na
 missing_points <-anti_join(all_expected, datLLNpeak, by = c("year","plot","sci_name"))
 print(missing_points)
 
-
-##I wrote down the p-value for this before I added 2019 so this can be a check
+#I wrote down the p-value for this before I added 2019 so this can be a check
 DropPrecip <- lme(weekPeakWt ~ Precip.tot, random=list(sci_name=~1, plot=~1), data=no_2019)
 Nprecip_linked <- lme(perN.weighted ~ Precip.tot + weekPeakWt, random = list(sci_name = ~1, plot = ~1), data = no_2019)
 
 no_2019_sem <- psem(DropPrecip, Nprecip_linked)
 summary(no_2019_sem)
+
+#More not believing this
+YearN <- lme(perN.weighted ~ as.factor(year), random = list(sci_name = ~1, plot = ~1), data = dat_no_outlier)
+summary(YearN)
+r.squaredGLMM(YearN)
+
+Year_randomN <- lme(perN.weighted ~ Precip.tot, random = list(year=~1, sci_name=~1, plot=~1), data = dat_no_outlier)
+summary(Year_randomN)
+r.squaredGLMM(Year_randomN)
+
+Year_randomNDrop <- lme(perN.weighted ~ weekPeakWt, random = list(year=~1, sci_name=~1, plot=~1), data = dat_no_outlier)
+summary(Year_randomNDrop)
+r.squaredGLMM(Year_randomNDrop)
+
+
+
+########################################################
+#Important Models rn ----
+#NPrecip_forest <- lme(perN.weighted ~ Precip.tot, random=list(sci_name=~1, plot=~1), data=datLLNpeak)
+NPrecip_forest <- lme(perN.weighted ~ Precip.tot, random=list(sci_name=~1, plot=~1), data=dat_no_outlier)
+summary(NPrecip_forest)
+anova(NPrecip_forest)
+r.squaredGLMM(NPrecip_forest)
+
+sppNPrecip <- lme(perN.weighted ~ Precip.tot*sci_name, random=list(plot=~1), data=datLLNpeak)
+summary(sppNPrecip)
+anova(sppNPrecip)
+r.squaredGLMM(sppNPrecip)
+
+#DropPrecip <- lme(weekPeakWt ~ Precip.tot, random=list(sci_name=~1, plot=~1), data=datLLNpeak)
+DropPrecip <- lme(weekPeakWt ~ Precip.tot, random=list(sci_name=~1, plot=~1), data=dat_no_outlier)
+summary(DropPrecip)
+anova(DropPrecip)
+r.squaredGLMM(DropPrecip)
+
+spDropPrecip <- lme(weekPeakWt ~ Precip.tot * sci_name, random=list(plot=~1), data = )
+summary(spDropPrecip)
+anova(spDropPrecip)
+r.squaredGLMM(spDropPrecip)
+
+#TimeN <- lme(perN.weighted ~ weekPeakWt, random=list(sci_name=~1, plot=~1), data=datLLNpeak)
+TimeN <- lme(perN.weighted ~ weekPeakWt, random=list(sci_name=~1, plot=~1), data=dat_no_outlier)
+summary(TimeN)
+anova(TimeN)
+r.squaredGLMM(TimeN)
+
+
+
+
+NPrecip_year <- lme(perN.weighted ~ Precip.tot, random=list(year=~1, sci_name=~1, plot=~1), data=dat_no_outlier)
+summary(NPrecip_year)
+anova(NPrecip_year)
+r.squaredGLMM(NPrecip_year)
+
+DropPrecip_year <- lme(weekPeakWt ~ Precip.tot, random=list(year=~1, sci_name=~1, plot=~1), data=dat_no_outlier)
+summary(DropPrecip_year)
+anova(DropPrecip_year)
+r.squaredGLMM(DropPrecip_year)
+
+TimeN_year <- lme(perN.weighted ~ weekPeakWt, random=list(year=~1, sci_name=~1, plot=~1), data=dat_no_outlier)
+summary(TimeN_year)
+anova(TimeN_year)
+r.squaredGLMM(TimeN_year)
+
+
+####################################################################
+#Making graphs for collaborator meeting
+
+ggplot(dat_no_outlier, aes(x = Precip.tot, y = perN.weighted, color = sci_name)) +
+  geom_point(alpha =0.6) +
+  geom_smooth(method ="lm", se=F) +
+  labs(
+    x = "Total Summer Precipitation (mm)",
+    y = "Nitrogen Percentage\n in Leaf Litter (%)",
+    color = "Species"
+  ) +
+  theme_minimal()
+
+ggplot(dat_no_outlier, aes(x = Precip.tot, y = perN.weighted, color = sci_name)) +
+  geom_point(alpha =0.6) +
+  geom_smooth(method ="lm", se=F) +
+  facet_wrap(~plot) +
+  labs(
+    x = "Total Summer Precipitation (mm)",
+    y = "Nitrogen Percentage\n in Leaf Litter (%)",
+    color = "Species"
+  ) +
+  theme_minimal()
+
+
+
+ggplot(dat_no_outlier, aes(x = Precip.tot, y = weekPeakWt, color = sci_name)) +
+  geom_point(alpha =0.6) +
+  geom_smooth(method ="lm", se=F) +
+  labs(
+    x = "Total Summer Precipitation (mm)",
+    y = "Week of Peak Litterfall",
+    color = "Species"
+  ) +
+  theme_minimal()
+
+ggplot(dat_no_outlier, aes(x = Precip.tot, y = weekPeakWt, color = sci_name)) +
+  geom_point(alpha =0.6) +
+  geom_smooth(method ="lm", se=F) +
+  facet_wrap(~plot) +
+  labs(
+    x = "Total Summer Precipitation (mm)",
+    y = "Week of Peak Litterfall",
+    color = "Species"
+  ) +
+  theme_minimal()
+
+
+
+ggplot(dat_no_outlier, aes(x = weekPeakWt, y = perN.weighted, color = sci_name)) +
+  geom_point(alpha =0.6) +
+  geom_smooth(method ="lm", se=F) +
+  labs(
+    x = "Week of Peak Litterfall",
+    y = "Nitrogen Percentage\n in Leaf Litter (%)",
+    color = "Species"
+  ) +
+  theme_minimal()
+
+ggplot(dat_no_outlier, aes(x = weekPeakWt, y = perN.weighted, color = sci_name)) +
+  geom_point(alpha =0.6) +
+  geom_smooth(method ="lm", se=F) +
+  facet_wrap(~plot) +
+  labs(
+    x = "Week of Peak Litterfall",
+    y = "Nitrogen Percentage\n in Leaf Litter (%)",
+    color = "Species"
+  ) +
+  theme_minimal()
+
+ggplot(dat_no_outlier, aes(x = weekPeakWt, y = perN.weighted, color = sci_name)) +
+  geom_point(alpha =0.6) +
+  geom_smooth(method ="lm", se=F) +
+  facet_wrap(~year) +
+  labs(
+    x = "Week of Peak Litterfall",
+    y = "Nitrogen Percentage\n in Leaf Litter (%)",
+    color = "Species"
+  ) +
+  theme_minimal()

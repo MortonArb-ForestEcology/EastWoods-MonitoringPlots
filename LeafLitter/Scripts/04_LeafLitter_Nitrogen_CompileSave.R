@@ -161,7 +161,7 @@ summary(LLN4a)
 
 # Run4a Species
 LLN4a$sci_name <- unlist(lapply(strsplit(LLN4a$Name, "_"), function(x){x[3]}))
-LLN4a$sci_name <- car::recode(LLN4a$sci_name, "'QUAL'='Quercus alba'; 'QUAB'='Quercus alba'; 'QURU'='Quercus rubra'; 'ACSA'='Acer saccharum'; ; 'ASCA'='Acer saccharum'")
+LLN4a$sci_name <- car::recode(LLN4a$sci_name, "'QUAL'='Quercus alba'; 'QUAB'='Quercus alba'; 'QURU'='Quercus rubra'; 'ACSA'='Acer saccharum'; 'ASCA'='Acer saccharum'")
 LLN4a$sci_name <- as.factor(LLN4a$sci_name)
 summary(as.factor(LLN4a$sci_name))
 
@@ -191,7 +191,7 @@ summary(LLN4b)
 
 # Run4a Species
 LLN4b$sci_name <- unlist(lapply(strsplit(LLN4b$Name, "_"), function(x){x[3]}))
-LLN4b$sci_name <- car::recode(LLN4b$sci_name, "'QUAL'='Quercus alba'; 'QUAB'='Quercus alba'; 'QURU'='Quercus rubra'; 'ACSA'='Acer saccharum'; ; 'ASCA'='Acer saccharum'")
+LLN4b$sci_name <- car::recode(LLN4b$sci_name, "'QUAL'='Quercus alba'; 'QUAB'='Quercus alba'; 'QURU'='Quercus rubra'; 'ACSA'='Acer saccharum'; 'ASCA'='Acer saccharum'")
 LLN4b$sci_name <- as.factor(LLN4b$sci_name)
 summary(as.factor(LLN4b$sci_name))
 
