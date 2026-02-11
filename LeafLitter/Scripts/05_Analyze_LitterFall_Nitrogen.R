@@ -43,6 +43,19 @@ summary(datLLN)
 summary(datSpp)
 summary(metSummer)
 
+
+# Separating Midsummer data from Autumn data
+datLLN$date_collection <- as.Date(datLLN$date_collection)
+table(year(datLLN$date_collection))
+
+dat.midsummer <- datLLN[month(datLLN$date_collection) %in% c(6, 7, 8), ]
+dat.fall <- datLLN[month(datLLN$date_collection) %in% c(9, 10, 11), ]
+
+dat.midsummer <- datLLN[month(datLLN$date_collection) %in% 6:8, ]
+
+summary(dat.midsummer)
+summary(dat.fall)
+
 # If we want to do a weighted-average of leaf N for our key species, we need to merge that in
 aggLeafPlotSpp <- aggregate(cbind(mass_g, mass_g_day)~ year + plot + sci_name + week + date_collection, data=datSpp, FUN=mean, na.rm=T)
 summary(aggLeafPlotSpp)

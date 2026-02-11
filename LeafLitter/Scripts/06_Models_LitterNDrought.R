@@ -329,7 +329,7 @@ summary(NPrecip_forest)
 anova(NPrecip_forest)
 r.squaredGLMM(NPrecip_forest)
 
-sppNPrecip <- lme(perN.weighted ~ Precip.tot*sci_name, random=list(plot=~1), data=datLLNpeak)
+sppNPrecip <- lme(perN.weighted ~ Precip.tot*sci_name, random=list(plot=~1), data=dat_no_outlier)
 summary(sppNPrecip)
 anova(sppNPrecip)
 r.squaredGLMM(sppNPrecip)
@@ -340,7 +340,7 @@ summary(DropPrecip)
 anova(DropPrecip)
 r.squaredGLMM(DropPrecip)
 
-spDropPrecip <- lme(weekPeakWt ~ Precip.tot * sci_name, random=list(plot=~1), data = )
+spDropPrecip <- lme(weekPeakWt ~ Precip.tot * sci_name, random=list(plot=~1), data=dat_no_outlier)
 summary(spDropPrecip)
 anova(spDropPrecip)
 r.squaredGLMM(spDropPrecip)
@@ -350,6 +350,11 @@ TimeN <- lme(perN.weighted ~ weekPeakWt, random=list(sci_name=~1, plot=~1), data
 summary(TimeN)
 anova(TimeN)
 r.squaredGLMM(TimeN)
+
+spTimeN <- lme(perN.weighted ~ weekPeakWt * sci_name, random=list(plot=~1), data = dat_no_outlier)
+summary(spTimeN)
+anova(spTimeN)
+r.squaredGLMM(spTimeN)
 
 
 
@@ -371,10 +376,10 @@ r.squaredGLMM(TimeN_year)
 
 
 ####################################################################
-#Making graphs for collaborator meeting
+#Making graphs for collaborator meeting ----
 
 ggplot(dat_no_outlier, aes(x = Precip.tot, y = perN.weighted, color = sci_name)) +
-  geom_point(alpha =0.6) +
+  geom_jitter(alpha =0.6, width =5) +
   geom_smooth(method ="lm", se=F) +
   labs(
     x = "Total Summer Precipitation (mm)",
@@ -397,7 +402,7 @@ ggplot(dat_no_outlier, aes(x = Precip.tot, y = perN.weighted, color = sci_name))
 
 
 ggplot(dat_no_outlier, aes(x = Precip.tot, y = weekPeakWt, color = sci_name)) +
-  geom_point(alpha =0.6) +
+  geom_jitter(alpha =0.6, width=5) +
   geom_smooth(method ="lm", se=F) +
   labs(
     x = "Total Summer Precipitation (mm)",
@@ -450,3 +455,338 @@ ggplot(dat_no_outlier, aes(x = weekPeakWt, y = perN.weighted, color = sci_name))
     color = "Species"
   ) +
   theme_minimal()
+
+datStoich <- dat_no_outlier%>%
+  pivot_longer(cols = c(perN.weighted, perC.weighted, C.N.weighted), 
+               names_to = "Metric", values_to = "Value") %>%
+  mutate(Metric = case_match(Metric,
+                             "perN.weighted" ~ "Nitrogen (%)",
+                             "perC.weighted" ~ "Carbon (%)",
+                             "C.N.weighted"  ~ "C:N Ratio"))
+
+ggplot(datStoich, aes(x = Precip.tot, y = Value, color = sci_name)) +
+  facet_wrap(~Metric, scales = "free_y") +
+  geom_point(alpha = 0.5) +
+  stat_smooth(method = "lm", se=F) +
+  labs(x = "Total Summer Precipitation (mm)",
+       y = "Measured Value",
+       color = "Species") +
+  theme_minimal() 
+
+
+
+datDrought <- dat_no_outlier%>%
+  pivot_longer(cols = c(Precip.tot, VPD.avg, n.Rainless, RainlessConsec.max), 
+               names_to = "Drought_Metric", values_to = "Metric_Value") %>%
+  mutate(Drought_Metric = case_match(Drought_Metric,
+                             "Precip.tot" ~ "Total Summer Precipitation",
+                             "VPD.avg" ~ "Average VPD",
+                             "n.Rainless"  ~ "# of Rainless Days",
+                             "RainlessConsec.max" ~ "# of Consecutive\n Rainless Days"))
+
+ggplot(datDrought, aes(x = Metric_Value, y = perN.weighted, color = sci_name)) +
+  facet_wrap(~Drought_Metric, scales = "free_x") +
+  geom_jitter(alpha = 0.5) +
+  stat_smooth(method = "lm", se=F) +
+  labs(x = "Drought Metric Value Value",
+       y = "Nitrogen Percentage\n in Leaf Litter (%)",
+       color = "Species") +
+  theme_minimal()
+
+ggplot(datDrought, aes(x = Metric_Value, y = weekPeakWt, color = sci_name)) +
+  facet_wrap(~Drought_Metric, scales = "free_x") +
+  geom_jitter(alpha = 0.5) +
+  stat_smooth(method = "lm", se=F) +
+  labs(x = "Drought Metric Value Value",
+       y = "Week of Peak Litterfall",
+       color = "Species") +
+  theme_minimal()
+
+
+
+dat_annual_summary <- dat_no_outlier %>%
+  group_by(year) %>%
+  summarize(
+    meanN = mean(perN.weighted, na.rm = TRUE),
+    seN = sd(perN.weighted, na.rm = TRUE) / sqrt(n()),
+    Precip = mean(Precip.tot))
+
+ggplot(dat_annual_summary, aes(x = Precip, y = meanN)) +
+  geom_smooth(method = "lm", se=FALSE) +
+  geom_point() +
+  geom_text(aes(label = year), vjust = -1.5) +
+  theme_minimal() +
+  labs(x = "Total Precipitation (mm)", 
+       y = "Mean %N")
+meanNprecip <- lm(meanN ~ Precip, data=dat_annual_summary)
+summary(meanNprecip)
+
+
+
+dat_species_summary <- datLLNpeak %>%
+  group_by(year, sci_name) %>%
+  summarize(
+    meanN = mean(perN.weighted, na.rm = TRUE),
+    seN = sd(perN.weighted, na.rm = TRUE) / sqrt(n()),
+    Precip = mean(Precip.tot))
+
+ggplot(dat_species_summary, aes(x = Precip, y = meanN, color = sci_name)) +
+  geom_point() +
+  stat_smooth(method = "lm", se = FALSE) +
+  labs(x = "Total Precipitation (mm)", 
+       y = "Mean %N",
+       color = "Species")+
+  theme_minimal()
+  
+
+
+#dat_distyear <- dat_no_outlier %>%
+ # select(year, perN.weighted, weekPeakWt, Precip.tot) %>%
+  #pivot_longer(cols = -year, names_to = "Variable", values_to = "Value") %>%
+  #mutate(Clean_name = case_match(Variable,
+    #                                 "year" ~ "Year",
+   #                                  "perN.weighted" ~ "%N",
+     #                                "weekPeakWt"  ~ "Week of Peak Litterfall",
+      #                               "Precip.tot" ~ "Total Precipitation (mm)"))
+
+#ggplot(dat_distyear, aes(x = Variable, y = Value)) +
+ # geom_boxplot(outlier.shape = NA, alpha = 0.5) + 
+  #geom_jitter(aes(color = as.factor(year)), width = 0.2, size = 2) +
+  #facet_wrap(~Clean_name, scales = "free_y") +
+  #theme_minimal() +
+  #theme(axis.title.x = element_blank(),
+   #     axis.text.x = element_blank(),
+    #    axis.ticks.x = element_blank()) +
+#  labs(color = "Year")
+
+
+#dat_distspec <- dat_no_outlier %>%
+ # select(sci_name, perN.weighted, weekPeakWt, Precip.tot) %>%
+  #pivot_longer(cols = -sci_name, names_to = "Variable", values_to = "Value") %>%
+  #mutate(Clean_name = case_match(Variable,
+   #                              "sci_name" ~ "Species",
+    #                             "perN.weighted" ~ "%N",
+     #                            "weekPeakWt"  ~ "Week of Peak Litterfall",
+      #                           "Precip.tot" ~ "Total Precipitation (mm)"))
+
+#ggplot(dat_distspec, aes(x = Variable, y = Value)) +
+ # geom_boxplot(outlier.shape = NA, alpha = 0.5) + 
+  #geom_jitter(aes(color = sci_name), width = 0.2, size = 2) +
+#  facet_wrap(~Clean_name, scales = "free_y") +
+ # theme_minimal() +
+  #theme(axis.title.x = element_blank(),
+   #     axis.text.x = element_blank(),
+    #    axis.ticks.x = element_blank()) +
+  #labs(color = "Species")
+
+
+
+#dat_longyear <- dat_no_outlier %>%
+ # select(year, perN.weighted, weekPeakWt, Precip.tot) %>%
+  #pivot_longer(cols = -year, names_to = "Variable", values_to = "Value") %>%
+  #mutate(Clean_name = case_match(Variable,
+   #                              "perN.weighted" ~ "%N",
+    #                             "weekPeakWt"    ~ "Week of Peak Litterfall",
+     #                            "Precip.tot"    ~ "Total Precipitation (mm)"))
+
+#ggplot(dat_longyear %>% filter(Variable == "perN.weighted"), aes(x = as.factor(year), y = Value)) +
+ # geom_boxplot(data = dat_long %>% filter(Variable == "perN.weighted") %>% mutate(year = "All"), 
+  #             aes(x = "Total Range"), alpha = 0.5) +
+#  geom_boxplot(aes(fill = as.factor(year)), alpha = 0.7, outlier.shape = NA) +
+ # geom_jitter(width = 0.15, alpha = 0.4) +
+#  facet_wrap(~Clean_name, scales = "free") +
+ # theme_minimal() +
+#  labs(x = "Year (vs Total Range)", 
+ #      y = "Percent Nitrogen (%)",
+  #     fill = "Year")
+#ggplot(dat_longyear %>% filter(Variable == "weekPeakWt"), aes(x = as.factor(year), y = Value)) +
+ # geom_boxplot(data = dat_long %>% filter(Variable == "weekPeakWt") %>% mutate(year = "All"), 
+  #             aes(x = "Total Range"), alpha = 0.5) +
+  #geom_boxplot(aes(fill = as.factor(year)), alpha = 0.7, outlier.shape = NA) +
+  #geom_jitter(width = 0.15, alpha = 0.4) +
+  #facet_wrap(~Clean_name, scales = "free") +
+  #theme_minimal() +
+  #labs(x = "Year (vs Total Range)", 
+   #    y = "Week of Peak Litterfall",
+    #   fill = "Year")
+
+
+#dat_precipyear <- dat_no_outlier %>%
+ # select(year, Precip.tot) %>%
+  #distinct()
+#ggplot(dat_precipyear, aes(x = Precip.tot, y = as.factor(year))) +
+ # geom_point(aes(color = as.factor(year)), size = 5) +
+  #theme_minimal() +
+  #labs(x = "Total Precipitation (mm)",
+   #    y = "Year",
+    #   color = "Year")
+
+
+#dat_longsp <- dat_no_outlier %>%
+ # select(sci_name, perN.weighted, weekPeakWt, Precip.tot) %>%
+  #pivot_longer(cols = -sci_name, names_to = "Variable", values_to = "Value") %>%
+  #mutate(Clean_name = case_match(Variable,
+   #                              "perN.weighted" ~ "%N",
+    #                             "weekPeakWt"    ~ "Week of Peak Litterfall",
+     #                            "Precip.tot"    ~ "Total Precipitation (mm)"))
+
+#ggplot(dat_longsp %>% filter(Variable == "perN.weighted"), aes(x = as.factor(sci_name), y = Value)) +
+ # geom_boxplot(data = dat_long %>% filter(Variable == "perN.weighted") %>% mutate(sci_name = "All"), 
+  #             aes(x = "Total Range"), alpha = 0.5) +
+  geom_boxplot(aes(fill = as.factor(sci_name)), alpha = 0.7, outlier.shape = NA) +
+  geom_jitter(width = 0.15, alpha = 0.4) +
+  facet_wrap(~Clean_name, scales = "free") +
+  theme_minimal() +
+  labs(x = "Species (vs Total Range)", 
+       y = "Percent Nitrogen (%)",
+       fill = "Species")
+ggplot(dat_longsp %>% filter(Variable == "weekPeakWt"), aes(x = as.factor(sci_name), y = Value)) +
+  geom_boxplot(data = dat_long %>% filter(Variable == "weekPeakWt") %>% mutate(sci_name = "All"), 
+               aes(x = "Total Range"), alpha = 0.5) +
+  geom_boxplot(aes(fill = as.factor(sci_name)), alpha = 0.7, outlier.shape = NA) +
+  geom_jitter(width = 0.15, alpha = 0.4) +
+  facet_wrap(~Clean_name, scales = "free") +
+  theme_minimal() +
+  labs(x = "Species (vs Total Range)", 
+       y = "Week of Peak Litterfall",
+       fill = "Species")
+
+
+########################################
+#Non-parametric tests ----
+year_catN <- aov(perN.weighted ~ as.factor(year), data=dat_no_outlier)
+summary(year_catN)
+
+year_cat_time <- aov(weekPeakWt ~ as.factor(year), data=dat_no_outlier)
+summary(year_cat_time)
+
+
+YearN <- lme(perN.weighted ~ as.factor(year), random = list(sci_name = ~1, plot = ~1), data = dat_no_outlier)
+summary(YearN)
+r.squaredGLMM(YearN)
+
+
+
+cor.test(dat_no_outlier$Precip.tot, dat_no_outlier$perN.weighted, method = "spearman")
+cor.test(dat_no_outlier$Precip.tot, dat_no_outlier$weekPeakWt, method = "spearman")
+cor.test(dat_no_outlier$weekPeakWt, dat_no_outlier$perN.weighted, method = "spearman")
+
+
+
+library(quantreg)
+Nprecipmodel_median <- rq(perN.weighted ~ Precip.tot, data = dat_no_outlier, tau = 0.5)
+summary(Nprecipmodel_median)
+
+Timeprecipmodel_median <- rq(weekPeakWt ~ Precip.tot, data = dat_no_outlier, tau = 0.5)
+summary(Timeprecipmodel_median)
+
+TimeNmodel_median <- rq(perN.weighted ~ weekPeakWt, data = dat_no_outlier, tau = 0.5)
+summary(TimeNmodel_median)
+
+
+taus <- c(0.1, 0.5, 0.9)
+for (t in taus) {
+  model <- rq(perN.weighted ~ Precip.tot, data = dat_no_outlier, tau = t)
+  print(summary(model))}
+for (t in taus) {
+  model <- rq(weekPeakWt ~ Precip.tot, data = dat_no_outlier, tau = t)
+  print(summary(model))}
+for (t in taus) {
+  model <- rq(perN.weighted ~ weekPeakWt, data = dat_no_outlier, tau = t)
+  print(summary(model))}
+
+
+
+
+
+#############################
+#make sure to actually load in midsummer
+
+hist(dat.midsummer$X.N, main="Midsummer Nitrogen Distribution")
+
+
+ggplot(dat.midsummer, aes(x = as.factor(year), y = X.N, fill = as.factor(year))) +
+  geom_boxplot() +
+  labs(y = "Nitrogen (%)", x = "Year") +
+  theme_minimal()
+
+ggplot(dat.midsummer, aes(x = sci_name, y = X.N, fill = sci_name)) +
+  geom_boxplot() +
+  labs(y = "Nitrogen (%)", x = "Species") +
+  theme_minimal()
+
+ggplot(dat.midsummer, aes(x = plot, y = X.N, fill = plot)) +
+  geom_boxplot() +
+  labs(y = "Nitrogen (%)", x = "Plot") +
+  theme_minimal()
+
+ggplot(dat.midsummer, aes(x = plot, y = X.N, fill = sci_name)) +
+  geom_boxplot() +
+  labs(y = "Nitrogen (%)", x = "Plot") +
+  theme_minimal()
+
+ggplot(dat.midsummer, aes(x = sci_name, y = X.N, fill = plot)) +
+  geom_boxplot() +
+  labs(y = "Nitrogen (%)", x = "Plot") +
+  theme_minimal()
+
+ggplot(dat.midsummer, aes(x = as.factor(year), y = X.N, fill = plot)) +
+  geom_boxplot() +
+  labs(y = "Nitrogen (%)", x = "Year") +
+  theme_minimal()
+
+ggplot(dat.midsummer, aes(x = as.factor(year), y = X.N, fill = sci_name)) +
+  geom_boxplot() +
+  labs(y = "Nitrogen (%)", x = "Year") +
+  theme_minimal()
+
+
+dat.midsummer %>%
+  group_by(as.factor(year)) %>%
+  summarize(mean = mean(X.N),
+            median = median(X.N),
+            sd = sd(X.N),
+            iqr = IQR(X.N),
+            n = n())
+dat.midsummer %>%
+  group_by(plot) %>%
+  summarize(mean = mean(X.N),
+            median = median(X.N),
+            sd = sd(X.N),
+            iqr = IQR(X.N),
+            n = n())
+dat.midsummer %>%
+  group_by(sci_name) %>%
+  summarize(mean = mean(X.N),
+            median = median(X.N),
+            sd = sd(X.N),
+            iqr = IQR(X.N),
+            n = n())
+
+midsummer_yearN <- aov(X.N ~ as.factor(year), data=dat.midsummer)
+summary(midsummer_yearN)
+
+midsummer_plotN <- aov(X.N ~ plot, data=dat.midsummer)
+summary(midsummer_plotN)
+
+midsummer_specN <- aov(X.N ~ sci_name, data=dat.midsummer)
+summary(midsummer_specN)
+
+
+summer_mixed1 <- lme(X.N ~ as.factor(year), random=list(sci_name=~1), data=dat.midsummer)
+summary(summer_mixed1)
+anova(summer_mixed1)
+
+summer_mixed2 <- lme(X.N ~ as.factor(year)*sci_name, random=list(plot=~1), data=dat.midsummer)
+summary(summer_mixed2)
+
+summer_mixed3 <- lme(X.N ~ as.factor(year)*plot, random=list(sci_name=~1), data=dat.midsummer)
+summary(summer_mixed3)
+
+year_spec_means <- dat.midsummer %>%
+  group_by(year, sci_name) %>%
+  summarize(gap_fill_N = mean(X.N, na.rm = TRUE), .groups = "drop")
+
+
+
+

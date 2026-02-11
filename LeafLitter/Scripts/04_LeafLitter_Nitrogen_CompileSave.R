@@ -15,197 +15,241 @@ path.save <- file.path(path.litter, "LeafLitterData_Clean_forArchiving") # Where
 path.CN <- "~/Library/CloudStorage/GoogleDrive-lizer1@stolaf.edu/.shortcut-targets-by-id/0B_Fbr697pd36TkVHdDNJQ1dJU1E/East Woods/Rollinson_Monitoring/Data/Leaf_litter_data/CN_Runs/"
 
 dir(path.CN)
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# Formating 2018 ----
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-LLN2018 <- read.csv(file.path(path.CN, "Fall_2018_run1.csv"))
+
+
+######################################################
+# Making a standard format for each run ----
+######################################################
+# Assign plot based on first letter of sample Name
+assign_plot <- function(df) {
+  df$plot <- NA_character_
+  df$plot[substr(df$Name, 1, 1) == "B"] <- "B-127"
+  df$plot[substr(df$Name, 1, 1) == "H"] <- "HH-115"
+  df$plot[substr(df$Name, 1, 1) == "N"] <- "N-115"
+  df$plot[substr(df$Name, 1, 1) == "U"] <- "U-134"
+  
+  df$plot <- factor(df$plot)
+  
+  if (any(is.na(df$plot))) {
+    warning("Some samples have NA plot assignments")
+  }
+  
+  df
+}
+
+# Remove blanks, standards, test runs, and other non-samples
+clean_samples <- function(df) {
+  bad <- c(
+    "Blank-", "blank-", "runIn", "RunIn", "standard",
+    "stop", "test", "Test", "TEST",
+    "Acetanilide", "acetanilide", "check", NA
+  )
+  
+  df[!df$Name %in% bad, ]
+}
+
+# Recode species abbreviations to scientific names
+recode_species <- function(x) {
+  car::recode(
+    x,
+    "'QA'='Quercus alba';
+     'QUAL'='Quercus alba';
+     'QUAB'='Quercus alba';
+     'QURU'='Quercus rubra';
+     'TA'='Tilia americana';
+     'TIAM'='Tilia americana';
+     'AS'='Acer saccharum';
+     'ACSA'='Acer saccharum';
+     'ASCA'='Acer saccharum'"
+  )
+}
+
+
+# Extract collection date from Name field
+extract_date <- function(df, type = c("underscore", "2018")) {
+  type <- match.arg(type)
+  
+  if (type == "underscore") {
+    df$date_collection <- as.Date(
+      sapply(strsplit(df$Name, "_"), `[`, 2),
+      format = "%Y%m%d"
+    )
+  }
+  
+  if (type == "2018") {
+    df$date_collection <- as.Date(
+      substr(df$Name, 3, 10),
+      format = "%y-%m-%d"
+    )
+  }
+  
+  if (any(is.na(df$date_collection))) {
+    warning("Some dates failed to parse")
+  }
+  
+  df
+}
+
+
+# Extract species code from Name field
+extract_species <- function(df, type = c("underscore", "2018")) {
+  type <- match.arg(type)
+  
+  if (type == "underscore") {
+    df$sci_name <- sapply(strsplit(df$Name, "_"), `[`, 3)
+  }
+  
+  if (type == "2018") {
+    df$sci_name <- substr(df$Name, 11, 12)
+  }
+  
+  df$sci_name <- factor(recode_species(df$sci_name))
+  df
+}
+
+
+format_run <- function(path, file, n_rows = NULL) {
+  # Read file
+  df <- as.data.frame(read_xlsx(file.path(path, file)))
+  # Optionally restrict rows (Run 4 had to only take 1st 70 samples)
+  if (!is.null(n_rows)) {
+    df <- df[seq_len(min(n_rows, nrow(df))), ]
+  }
+  # Keep and rename CN columns
+  df <- df[, c("Name", "N  [%]", "C  [%]", "C/N  ratio")]
+  names(df) <- c("Name", "X.N", "X.C", "C.N")
+  # Standard CN cleaning
+  df %>%
+    clean_samples() %>%
+    assign_plot() %>%
+    extract_date("underscore") %>%
+    extract_species("underscore")
+}
+
+
+######################################################
+# Clean 2018  (ran by lucien with different naming) ----
+######################################################
+LLN2018 <- read.csv(file.path(path.CN, "Fall_2018_run1.csv")) %>%
+  assign_plot() %>%
+  extract_date(type = "2018") %>%
+  extract_species(type = "2018")
+
 summary(LLN2018)
-head(LLN2018)
 
-# 2018 Plot
-LLN2018$plot[substr(LLN2018$Name,1,1)=="B"] <- "B-127"  
-LLN2018$plot[substr(LLN2018$Name,1,1)=="H"] <- "HH-115"  
-LLN2018$plot[substr(LLN2018$Name,1,1)=="N"] <- "N-115"  
-LLN2018$plot[substr(LLN2018$Name,1,1)=="U"] <- "U-134"  
-LLN2018$plot <-as.factor(LLN2018$plot)
+######################################################
+# Clean Cierra Runs (2018-2023) ----
+######################################################
 
-# 2018 Date
-LLN2018$date_collection <- as.Date(substr(LLN2018$Name, 3, 10), format="%y-%m-%d")
-summary(LLN2018)
-
-# 2018 Species
-LLN2018$sci_name <- substr(LLN2018$Name,11,12)
-LLN2018$sci_name <- car::recode(LLN2018$sci_name, "'QA'='Quercus alba'; 'TA'='Tilia americana'; 'AS'='Acer saccharum'")
-LLN2018$sci_name <-as.factor(LLN2018$sci_name)
-summary(LLN2018)
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# Formating 2021-2022 ----
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# LLN2122path<-list.files(path.CN, pattern = "Lizer_EWLL_2021-2022_run.xlsx", full.names = TRUE)
-LLN2122 <- read_xlsx(file.path(path.CN, "Lizer_EWLL_2021-2022_run.xlsx"))
-LLN2122 <- data.frame(LLN2122)
-names(LLN2122) <- c("Name", "X.N", "X.C", "C.N")
-head(LLN2122)
-
-# 2021-2022 Plot
-LLN2122$plot[substr(LLN2122$Name,1,1)=="B"] <- "B-127"  
-LLN2122$plot[substr(LLN2122$Name,1,1)=="H"] <- "HH-115"  
-LLN2122$plot[substr(LLN2122$Name,1,1)=="N"] <- "N-115"  
-LLN2122$plot[substr(LLN2122$Name,1,1)=="U"] <- "U-134"  
-LLN2122$plot <-as.factor(LLN2122$plot)
+LLN2122 <- format_run(path.CN, "Lizer_EWLL_2021-2022_run.xlsx")
 summary(LLN2122)
-
-# 2021-2022 Date
-LLN2122$date_collection <- unlist(lapply(strsplit(LLN2122$Name, "_"), function(x){x[2]}))
-LLN2122$date_collection <- as.Date(LLN2122$date_collection, format="%Y%m%d")
-summary(LLN2122)
-
-# 2021-2022 Species
-LLN2122$sci_name <- unlist(lapply(strsplit(LLN2122$Name, "_"), function(x){x[3]}))
-LLN2122$sci_name <- car::recode(LLN2122$sci_name, "'QUAL'='Quercus alba'; 'QUAB'='Quercus alba'; 'QURU'='Quercus rubra'; 'ACSA'='Acer saccharum'")
-LLN2122$sci_name <- as.factor(LLN2122$sci_name)
-summary(LLN2122)
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# Formatting  "Run 2" ----
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-dir(path.CN)
-LLN2 <- data.frame(read_xlsx(file.path(path.CN, "Lizer_EWLL_run2_0715_corrected.xlsx")))
-LLN2 <- LLN2[,c("Name", "N.....", "C.....", "C.N..ratio")]
-names(LLN2) <- c("Name", "X.N", "X.C", "C.N")
-LLN2 <- LLN2[!LLN2$Name %in% c("blank-", "runIn", "standard", "stop", "test", NA, "Acetanilide", "check"),]
-head(LLN2)
-tail(LLN2)
-
-# Run2 Plot
-LLN2$plot[substr(LLN2$Name,1,1)=="B"] <- "B-127"  
-LLN2$plot[substr(LLN2$Name,1,1)=="H"] <- "HH-115"  
-LLN2$plot[substr(LLN2$Name,1,1)=="N"] <- "N-115"  
-LLN2$plot[substr(LLN2$Name,1,1)=="U"] <- "U-134"  
-LLN2$plot <-as.factor(LLN2$plot)
+LLN2 <- format_run(path.CN, "Lizer_EWLL_run2_0715_corrected.xlsx")
 summary(LLN2)
-
-# Run2 Date
-LLN2$date_collection <- unlist(lapply(strsplit(LLN2$Name, "_"), function(x){x[2]}))
-LLN2$date_collection <- as.Date(LLN2$date_collection, format="%Y%m%d")
-summary(LLN2)
-
-# Run2 Species
-LLN2$sci_name <- unlist(lapply(strsplit(LLN2$Name, "_"), function(x){x[3]}))
-LLN2$sci_name <- car::recode(LLN2$sci_name, "'QUAL'='Quercus alba'; 'QUAB'='Quercus alba'; 'QURU'='Quercus rubra'; 'ACSA'='Acer saccharum'")
-LLN2$sci_name <-as.factor(LLN2$sci_name)
-
-summary(LLN2)
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# Formatting  "Run 3" ----
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-dir(path.CN)
-LLN3 <- data.frame(read_xlsx(file.path(path.CN, "Lizer_EWLL_Run3_SH_072125.xlsx")))
-LLN3 <- LLN3[,c("Name", "N.....", "C.....", "C.N..ratio")]
-names(LLN3) <- c("Name", "X.N", "X.C", "C.N")
-LLN3 <- LLN3[!LLN3$Name %in% c("blank-", "runIn", "standard", "stop", "test", NA, "Acetanilide", "acetanilide", "check"),]
-head(LLN3)
-tail(LLN3)
-
-# Run3 Plot
-LLN3$plot[substr(LLN3$Name,1,1)=="B"] <- "B-127"  
-LLN3$plot[substr(LLN3$Name,1,1)=="H"] <- "HH-115"  
-LLN3$plot[substr(LLN3$Name,1,1)=="N"] <- "N-115"  
-LLN3$plot[substr(LLN3$Name,1,1)=="U"] <- "U-134"  
-LLN3$plot <-as.factor(LLN3$plot)
+LLN3 <- format_run(path.CN, "Lizer_EWLL_Run3_SH_072125.xlsx")
 summary(LLN3)
-
-# Run3 Date
-LLN3$date_collection <- unlist(lapply(strsplit(LLN3$Name, "_"), function(x){x[2]}))
-LLN3$date_collection <- as.Date(LLN3$date_collection, format="%Y%m%d")
-summary(LLN3)
-
-# Run3 Species
-LLN3$sci_name <- unlist(lapply(strsplit(LLN3$Name, "_"), function(x){x[3]}))
-LLN3$sci_name <- car::recode(LLN3$sci_name, "'QUAL'='Quercus alba'; 'QUAB'='Quercus alba'; 'QURU'='Quercus rubra'; 'ACSA'='Acer saccharum'")
-LLN3$sci_name <- as.factor(LLN3$sci_name)
-summary(as.factor(LLN3$sci_name))
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# Formatting  "Run 4a" ----
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-dir(path.CN)
-LLN4a <- data.frame(read_xlsx(file.path(path.CN, "Lizer_EWLL_run_4.xlsx")))
-LLN4a <-LLN4a[1:70,] #Error with machine here, Sav says samples 1-70 look good, re-running samples after 70
-LLN4a <- LLN4a[,c("Name", "N.....", "C.....", "C.N..ratio")]
-names(LLN4a) <- c("Name", "X.N", "X.C", "C.N")
-LLN4a <- LLN4a[!LLN4a$Name %in% c("Blank-","blank-", "runIn", "standard", "stop", "test", NA, "Acetanilide", "acetanilide", "check"),]
-head(LLN4a)
-tail(LLN4a)
-
-# Run4a Plot
-LLN4a$plot[substr(LLN4a$Name,1,1)=="B"] <- "B-127"  
-LLN4a$plot[substr(LLN4a$Name,1,1)=="H"] <- "HH-115"  
-LLN4a$plot[substr(LLN4a$Name,1,1)=="N"] <- "N-115"  
-LLN4a$plot[substr(LLN4a$Name,1,1)=="U"] <- "U-134"  
-LLN4a$plot <-as.factor(LLN4a$plot)
+LLN4a <- format_run(path.CN, "Lizer_EWLL_run_4.xlsx", n_rows = 70)
 summary(LLN4a)
-
-# Run4a Date
-LLN4a$date_collection <- unlist(lapply(strsplit(LLN4a$Name, "_"), function(x){x[2]}))
-LLN4a$date_collection <- as.Date(LLN4a$date_collection, format="%Y%m%d")
-summary(LLN4a)
-
-# Run4a Species
-LLN4a$sci_name <- unlist(lapply(strsplit(LLN4a$Name, "_"), function(x){x[3]}))
-LLN4a$sci_name <- car::recode(LLN4a$sci_name, "'QUAL'='Quercus alba'; 'QUAB'='Quercus alba'; 'QURU'='Quercus rubra'; 'ACSA'='Acer saccharum'; 'ASCA'='Acer saccharum'")
-LLN4a$sci_name <- as.factor(LLN4a$sci_name)
-summary(as.factor(LLN4a$sci_name))
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# Formatting  "Run 4b" ---- the rerun samples from 4a
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-dir(path.CN)
-LLN4b <- data.frame(read_xlsx(file.path(path.CN, "Lizer_EWLL_plate_4_rerun.xlsx")))
-LLN4b <- LLN4b[,c("Name", "N.....", "C.....", "C.N..ratio")]
-names(LLN4b) <- c("Name", "X.N", "X.C", "C.N")
-LLN4b <- LLN4b[!LLN4b$Name %in% c("Blank-","blank-", "runIn", "standard", "stop", "test", NA, "Acetanilide", "acetanilide", "check"),]
-head(LLN4b)
-tail(LLN4b)
-
-# Run4b Plot
-LLN4b$plot[substr(LLN4b$Name,1,1)=="B"] <- "B-127"  
-LLN4b$plot[substr(LLN4b$Name,1,1)=="H"] <- "HH-115"  
-LLN4b$plot[substr(LLN4b$Name,1,1)=="N"] <- "N-115"  
-LLN4b$plot[substr(LLN4b$Name,1,1)=="U"] <- "U-134"  
-LLN4b$plot <-as.factor(LLN4b$plot)
+LLN4b <- format_run(path.CN, "Lizer_EWLL_plate_4_rerun.xlsx")
 summary(LLN4b)
-
-# Run4 Date
-LLN4b$date_collection <- unlist(lapply(strsplit(LLN4b$Name, "_"), function(x){x[2]}))
-LLN4b$date_collection <- as.Date(LLN4b$date_collection, format="%Y%m%d")
-summary(LLN4b)
-
-# Run4a Species
-LLN4b$sci_name <- unlist(lapply(strsplit(LLN4b$Name, "_"), function(x){x[3]}))
-LLN4b$sci_name <- car::recode(LLN4b$sci_name, "'QUAL'='Quercus alba'; 'QUAB'='Quercus alba'; 'QURU'='Quercus rubra'; 'ACSA'='Acer saccharum'; 'ASCA'='Acer saccharum'")
-LLN4b$sci_name <- as.factor(LLN4b$sci_name)
-summary(as.factor(LLN4b$sci_name))
+LLN5 <- format_run(path.CN, "Lizer_EWLL_plate5_012626_rerun.xlsx")
+summary(LLN5)
 
 
-LLN4a[LLN4a$plot=="U-134",]
-LLN4b[LLN4b$plot=="U-134",]
+######################################################
+# Plate 6 inconsistensies (naming and soils lab samples)
+######################################################
 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# Merging everything together!
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-datLLN <- rbind(LLN2018, LLN2122, LLN2, LLN3, LLN4a, LLN4b)
+# Normalize inconsistent Name formatting
+normalize_name <- function(name) {
+  # Remove leading/trailing whitespace
+  name <- trimws(name)
+  # Replace spaces with underscores HH15 20201029_TIAM
+  name <- gsub("\\s+", "_", name)
+  # Replace hyphen before species with underscore B127_20191104-ACSA -> B127_20191104_ACSA
+  name <- gsub("-(QUAL|QUAB|QURU|ACSA|TIAM)$", "_\\1", name)
+  # Fix dates split by space: _2023 1020_ -> _20231020_
+  name <- gsub("_(\\d{4})_(\\d{4})_", "_\\1\\2_", name)
+  # Fix dates split by underscore: _2021_0702_ -> _20210702_
+  name <- gsub("_(\\d{4})_(\\d{2})(\\d{2})_", "_\\1\\2\\3_", name)
+  # Fix missing plot digit (known issue in plate 7)
+  name <- gsub("^HH15_", "HH115_", name)
+  name
+}
+
+# Flag samples that follow expected naming rules
+flag_invalid_samples <- function(df) {
+  df$valid_sample <-
+    grepl("^(B127|HH115|N115|U134)_", df$Name) &
+    grepl("_(20\\d{6})_", df$Name) &
+    grepl("_(QUAL|QUAB|QURU|ACSA|TIAM)$", df$Name)
+  
+  df
+}
+
+LLN6_raw <- read_xlsx(file.path(path.CN, "lizer_plate6_soil_am.xlsx")) %>%
+  as.data.frame()
+
+#The machine turned off in the middle, values not accurate but re-ran in run 7
+LLN6_raw <- LLN6_raw[1:75,]
+
+LLN6 <- LLN6_raw %>%
+  transform(Name = normalize_name(Name)) %>%
+  flag_invalid_samples()
+
+# Inspect and drop soil samples
+LLN6[!LLN6$valid_sample, ]
+LLN6 <- LLN6[LLN6$valid_sample, ]
+LLN6$valid_sample <- NULL
+
+# Now format like a normal CN run
+LLN6 <- LLN6 %>%
+  clean_samples() %>%
+  assign_plot() %>%
+  extract_date("underscore") %>%
+  extract_species("underscore")
+
+LLN6 <- LLN6[, c("Name", "N  [%]", "C  [%]", "C/N  ratio", "plot", "date_collection", "sci_name")]
+names(LLN6) <- c("Name", "X.N", "X.C", "C.N", "plot", "date_collection", "sci_name")
+
+
+summary(LLN6)
+
+
+
+LLN7_raw <- read_xlsx(file.path(path.CN, "Lizer_EWLL_plate7.xlsx")) %>%
+  as.data.frame()
+
+LLN7 <- LLN7_raw %>%
+  transform(Name = normalize_name(Name)) %>%
+  flag_invalid_samples()
+
+# Inspect and drop soil samples
+LLN7[!LLN7$valid_sample, ]
+
+LLN7 <- LLN7 %>%
+  clean_samples() %>%
+  assign_plot() %>%
+  extract_date("underscore") %>%
+  extract_species("underscore")
+
+LLN7 <- LLN7[, c("Name", "N  [%]", "C  [%]", "C/N  ratio", "plot", "date_collection", "sci_name")]
+names(LLN7) <- c("Name", "X.N", "X.C", "C.N", "plot", "date_collection", "sci_name")
+
+
+######################################################
+# Combine all runs ----
+######################################################
+
+datLLN <- rbind(LLN2018, LLN2122, LLN2, LLN3, LLN4a, LLN4b, LLN5, LLN6, LLN7)
+
+stopifnot(
+  all(c("Name", "X.N", "X.C", "C.N",
+        "plot", "date_collection", "sci_name") %in% names(datLLN)))
+
 summary(datLLN)
 
-#write.csv(datLLN, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter", "LeafLitter-Nitrogen_bySpecies_combined.csv"), row.names=F)
-write.csv(datLLN, file.path ("~/Library/CloudStorage/GoogleDrive-lizer1@stolaf.edu/.shortcut-targets-by-id/1q2wvODXrDo0tgOTLpFqF7TqcWoKoHZjW/URF-REU 2025 - Lizer - Leaf Litter/", "LeafLitter-Nitrogen_bySpecies_combined.csv"), row.names=F)
+write.csv(datLLN, file.path ("~/Library/CloudStorage/GoogleDrive-lizer1@stolaf.edu/.shortcut-targets-by-id/1q2wvODXrDo0tgOTLpFqF7TqcWoKoHZjW/URF-REU 2025 - Lizer - Leaf Litter/", "LeafLitter-Nitrogen_bySpecies_combined.csv"), row.names=F) 
 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
+
+
