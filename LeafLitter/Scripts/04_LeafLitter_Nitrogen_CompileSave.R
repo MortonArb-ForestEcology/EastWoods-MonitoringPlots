@@ -156,7 +156,7 @@ summary(LLN5)
 
 
 ######################################################
-# Plate 6 inconsistensies (naming and soils lab samples)
+# Plate 6-8 inconsistensies (naming and soils lab samples)
 ######################################################
 
 # Normalize inconsistent Name formatting
@@ -215,7 +215,7 @@ names(LLN6) <- c("Name", "X.N", "X.C", "C.N", "plot", "date_collection", "sci_na
 summary(LLN6)
 
 
-
+#### Run 7
 LLN7_raw <- read_xlsx(file.path(path.CN, "Lizer_EWLL_plate7.xlsx")) %>%
   as.data.frame()
 
@@ -236,11 +236,43 @@ LLN7 <- LLN7[, c("Name", "N  [%]", "C  [%]", "C/N  ratio", "plot", "date_collect
 names(LLN7) <- c("Name", "X.N", "X.C", "C.N", "plot", "date_collection", "sci_name")
 
 
+
+LLN8_raw <- read_xlsx(file.path(path.CN, "Lizer_plate8.xlsx")) %>%
+  as.data.frame()
+
+
+LLN8_corrected <- LLN8_raw[83, "Name"] <- "B127_20191118_ACSA" #Sav didn't name this sample but we know what it was 
+LLN8_corrected <- LLN8_raw[-c(21:24), ] #these ran as blanks so we need to remove
+
+  
+LLN8 <- LLN8_corrected %>%
+  transform(Name = normalize_name(Name)) %>%
+  flag_invalid_samples()
+
+LLN8 <- LLN8 %>%
+  clean_samples() %>%
+  assign_plot() %>%
+  extract_date("underscore") %>%
+  extract_species("underscore")
+
+LLN8 <- LLN8[, c("Name", "N  [%]", "C  [%]", "C/N  ratio", "plot", "date_collection", "sci_name")]
+names(LLN8) <- c("Name", "X.N", "X.C", "C.N", "plot", "date_collection", "sci_name")
+
+summary(LLN8)
+
+
+
+#2019 outlier in LLN4a rerun in LLN8, taking this out of LLN4a
+LLN4a <- LLN4a %>%
+  filter(!(Name == "B127_20191118_ACSA"))
+summary(LLN4a)
+
+
 ######################################################
 # Combine all runs ----
 ######################################################
 
-datLLN <- rbind(LLN2018, LLN2122, LLN2, LLN3, LLN4a, LLN4b, LLN5, LLN6, LLN7)
+datLLN <- rbind(LLN2018, LLN2122, LLN2, LLN3, LLN4a, LLN4b, LLN5, LLN6, LLN7, LLN8)
 
 stopifnot(
   all(c("Name", "X.N", "X.C", "C.N",

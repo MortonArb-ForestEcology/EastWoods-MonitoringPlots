@@ -24,14 +24,38 @@ datLLNmerge <- read.csv(file.path(path.REU, "LeafLitter_combined_TimingNDrought.
 summary(datLLNmerge)
 str(datLLNmerge)
 
+datLLNmerge$date_collection <- as.Date(datLLNmerge$date_collection)
+dat.midsummer.merge <- datLLNmerge[month(datLLN$date_collection) %in% c(6, 7, 8), ]
+dat.fall.merge <- datLLNmerge[month(datLLN$date_collection) %in% c(9, 10, 11), ]
+
 ###########################################################
 #2: Stoich EDA  ----
 ggplot(datLLNmerge, aes(x = yday, y = X.N, color = sci_name)) +
   geom_point(alpha =0.6) +
   geom_smooth(method ="loess", se=F) +
-  facet_wrap(~year) + 
+  #facet_wrap(~year) + 
   coord_cartesian(xlim=c(270,340)) +
   theme_minimal()
+
+datLLNmerge %>% filter(X.N > 7) #theres an outlier
+datLLNmerge %>% filter(year == 2025)
+
+datLLNmerge_no.outlier <- datLLNmerge %>% filter(X.N < 7)
+
+ggplot(datLLNmerge_no.outlier, aes(x = yday, y = X.N, color = sci_name)) +
+  geom_point(alpha =0.6) +
+  geom_smooth(method ="loess", se=F) +
+  #facet_wrap(~year) + 
+  coord_cartesian(xlim=c(150,335)) +
+  theme_minimal()
+
+ggplot(dat.midsummer.merge, aes(x = yday, y = X.N, color = sci_name)) +
+  geom_point(alpha =0.6) +
+  geom_smooth(method ="loess", se=F) +
+  #facet_wrap(~year) + 
+  coord_cartesian(xlim=c(150,335)) +
+  theme_minimal()
+
 
 ggplot(datLLNmerge, aes(x = yday, y = X.C, color = sci_name)) +
   geom_point(alpha =0.6) +
@@ -255,13 +279,13 @@ summary(spec_SEM, standardize = "none")
 
 datLLNpeak[which.max(resid(NPrecip_forest, type = "pearson")), ]
 
-dat_no_outlier <- datLLNpeak[-13, ]
+#dat_no_outlier <- datLLNpeak[-13, ]
 
-NPrecip_no_outlier <- lme(perN.weighted ~ Precip.tot, random = list(sci_name = ~1, plot = ~1), data = dat_no_outlier)
+NPrecip_no_outlier <- lme(perN.weighted ~ Precip.tot, random = list(sci_name = ~1, plot = ~1), data = datLLNpeak)
 summary(NPrecip_no_outlier)
 r.squaredGLMM(NPrecip_no_outlier)
 
-NTime_no_outlier <- lme(perN.weighted ~ weekPeakWt, random = list(sci_name = ~1, plot = ~1), data = dat_no_outlier)
+NTime_no_outlier <- lme(perN.weighted ~ weekPeakWt, random = list(sci_name = ~1, plot = ~1), data = datLLNpeak)
 summary(NTime_no_outlier)
 r.squaredGLMM(NTime_no_outlier)
 
@@ -272,7 +296,7 @@ ggplot(datLLNpeak, aes(x = weekPeakWt, y = perN.weighted, color = sci_name)) +
   #coord_cartesian(xlim=c(270,340)) +
   theme_minimal()
 
-ggplot(dat_no_outlier, aes(x = Precip.tot, y = perN.weighted, color = sci_name)) +
+ggplot(datLLNpeak, aes(x = Precip.tot, y = perN.weighted, color = sci_name)) +
   geom_point(alpha =0.6) +
   geom_smooth(method ="lm", se=F) +
  # facet_wrap(~plot)
@@ -323,35 +347,32 @@ r.squaredGLMM(Year_randomNDrop)
 
 ########################################################
 #Important Models rn ----
-#NPrecip_forest <- lme(perN.weighted ~ Precip.tot, random=list(sci_name=~1, plot=~1), data=datLLNpeak)
-NPrecip_forest <- lme(perN.weighted ~ Precip.tot, random=list(sci_name=~1, plot=~1), data=dat_no_outlier)
+NPrecip_forest <- lme(perN.weighted ~ Precip.tot, random=list(sci_name=~1, plot=~1), data=datLLNpeak)
 summary(NPrecip_forest)
 anova(NPrecip_forest)
 r.squaredGLMM(NPrecip_forest)
 
-sppNPrecip <- lme(perN.weighted ~ Precip.tot*sci_name, random=list(plot=~1), data=dat_no_outlier)
+sppNPrecip <- lme(perN.weighted ~ Precip.tot*sci_name, random=list(plot=~1), data=datLLNpeak)
 summary(sppNPrecip)
 anova(sppNPrecip)
 r.squaredGLMM(sppNPrecip)
 
-#DropPrecip <- lme(weekPeakWt ~ Precip.tot, random=list(sci_name=~1, plot=~1), data=datLLNpeak)
-DropPrecip <- lme(weekPeakWt ~ Precip.tot, random=list(sci_name=~1, plot=~1), data=dat_no_outlier)
+DropPrecip <- lme(weekPeakWt ~ Precip.tot, random=list(sci_name=~1, plot=~1), data=datLLNpeak)
 summary(DropPrecip)
 anova(DropPrecip)
 r.squaredGLMM(DropPrecip)
 
-spDropPrecip <- lme(weekPeakWt ~ Precip.tot * sci_name, random=list(plot=~1), data=dat_no_outlier)
+spDropPrecip <- lme(weekPeakWt ~ Precip.tot * sci_name, random=list(plot=~1), data=datLLNpeak)
 summary(spDropPrecip)
 anova(spDropPrecip)
 r.squaredGLMM(spDropPrecip)
 
-#TimeN <- lme(perN.weighted ~ weekPeakWt, random=list(sci_name=~1, plot=~1), data=datLLNpeak)
-TimeN <- lme(perN.weighted ~ weekPeakWt, random=list(sci_name=~1, plot=~1), data=dat_no_outlier)
+TimeN <- lme(perN.weighted ~ weekPeakWt, random=list(sci_name=~1, plot=~1), data=datLLNpeak)
 summary(TimeN)
 anova(TimeN)
 r.squaredGLMM(TimeN)
 
-spTimeN <- lme(perN.weighted ~ weekPeakWt * sci_name, random=list(plot=~1), data = dat_no_outlier)
+spTimeN <- lme(perN.weighted ~ weekPeakWt * sci_name, random=list(plot=~1), data = datLLNpeak)
 summary(spTimeN)
 anova(spTimeN)
 r.squaredGLMM(spTimeN)
@@ -359,17 +380,17 @@ r.squaredGLMM(spTimeN)
 
 
 
-NPrecip_year <- lme(perN.weighted ~ Precip.tot, random=list(year=~1, sci_name=~1, plot=~1), data=dat_no_outlier)
+NPrecip_year <- lme(perN.weighted ~ Precip.tot, random=list(year=~1, sci_name=~1, plot=~1), data=datLLNpeak)
 summary(NPrecip_year)
 anova(NPrecip_year)
 r.squaredGLMM(NPrecip_year)
 
-DropPrecip_year <- lme(weekPeakWt ~ Precip.tot, random=list(year=~1, sci_name=~1, plot=~1), data=dat_no_outlier)
+DropPrecip_year <- lme(weekPeakWt ~ Precip.tot, random=list(year=~1, sci_name=~1, plot=~1), data=datLLNpeak)
 summary(DropPrecip_year)
 anova(DropPrecip_year)
 r.squaredGLMM(DropPrecip_year)
 
-TimeN_year <- lme(perN.weighted ~ weekPeakWt, random=list(year=~1, sci_name=~1, plot=~1), data=dat_no_outlier)
+TimeN_year <- lme(perN.weighted ~ weekPeakWt, random=list(year=~1, sci_name=~1, plot=~1), data=datLLNpeak)
 summary(TimeN_year)
 anova(TimeN_year)
 r.squaredGLMM(TimeN_year)
@@ -378,8 +399,8 @@ r.squaredGLMM(TimeN_year)
 ####################################################################
 #Making graphs for collaborator meeting ----
 
-ggplot(dat_no_outlier, aes(x = Precip.tot, y = perN.weighted, color = sci_name)) +
-  geom_jitter(alpha =0.6, width =5) +
+ggplot(datLLNpeak, aes(x = Precip.tot, y = perN.weighted, color = sci_name)) +
+  geom_jitter(alpha =0.6, width =3) +
   geom_smooth(method ="lm", se=F) +
   labs(
     x = "Total Summer Precipitation (mm)",
@@ -388,7 +409,7 @@ ggplot(dat_no_outlier, aes(x = Precip.tot, y = perN.weighted, color = sci_name))
   ) +
   theme_minimal()
 
-ggplot(dat_no_outlier, aes(x = Precip.tot, y = perN.weighted, color = sci_name)) +
+ggplot(datLLNpeak, aes(x = Precip.tot, y = perN.weighted, color = sci_name)) +
   geom_point(alpha =0.6) +
   geom_smooth(method ="lm", se=F) +
   facet_wrap(~plot) +
@@ -401,7 +422,7 @@ ggplot(dat_no_outlier, aes(x = Precip.tot, y = perN.weighted, color = sci_name))
 
 
 
-ggplot(dat_no_outlier, aes(x = Precip.tot, y = weekPeakWt, color = sci_name)) +
+ggplot(datLLNpeak, aes(x = Precip.tot, y = weekPeakWt, color = sci_name)) +
   geom_jitter(alpha =0.6, width=5) +
   geom_smooth(method ="lm", se=F) +
   labs(
@@ -411,7 +432,7 @@ ggplot(dat_no_outlier, aes(x = Precip.tot, y = weekPeakWt, color = sci_name)) +
   ) +
   theme_minimal()
 
-ggplot(dat_no_outlier, aes(x = Precip.tot, y = weekPeakWt, color = sci_name)) +
+ggplot(datLLNpeak, aes(x = Precip.tot, y = weekPeakWt, color = sci_name)) +
   geom_point(alpha =0.6) +
   geom_smooth(method ="lm", se=F) +
   facet_wrap(~plot) +
@@ -424,7 +445,7 @@ ggplot(dat_no_outlier, aes(x = Precip.tot, y = weekPeakWt, color = sci_name)) +
 
 
 
-ggplot(dat_no_outlier, aes(x = weekPeakWt, y = perN.weighted, color = sci_name)) +
+ggplot(datLLNpeak, aes(x = weekPeakWt, y = perN.weighted, color = sci_name)) +
   geom_point(alpha =0.6) +
   geom_smooth(method ="lm", se=F) +
   labs(
@@ -434,7 +455,7 @@ ggplot(dat_no_outlier, aes(x = weekPeakWt, y = perN.weighted, color = sci_name))
   ) +
   theme_minimal()
 
-ggplot(dat_no_outlier, aes(x = weekPeakWt, y = perN.weighted, color = sci_name)) +
+ggplot(datLLNpeak, aes(x = weekPeakWt, y = perN.weighted, color = sci_name)) +
   geom_point(alpha =0.6) +
   geom_smooth(method ="lm", se=F) +
   facet_wrap(~plot) +
@@ -445,7 +466,7 @@ ggplot(dat_no_outlier, aes(x = weekPeakWt, y = perN.weighted, color = sci_name))
   ) +
   theme_minimal()
 
-ggplot(dat_no_outlier, aes(x = weekPeakWt, y = perN.weighted, color = sci_name)) +
+ggplot(datLLNpeak, aes(x = weekPeakWt, y = perN.weighted, color = sci_name)) +
   geom_point(alpha =0.6) +
   geom_smooth(method ="lm", se=F) +
   facet_wrap(~year) +
@@ -456,7 +477,7 @@ ggplot(dat_no_outlier, aes(x = weekPeakWt, y = perN.weighted, color = sci_name))
   ) +
   theme_minimal()
 
-datStoich <- dat_no_outlier%>%
+datStoich <- datLLNpeak%>%
   pivot_longer(cols = c(perN.weighted, perC.weighted, C.N.weighted), 
                names_to = "Metric", values_to = "Value") %>%
   mutate(Metric = case_match(Metric,
@@ -475,7 +496,7 @@ ggplot(datStoich, aes(x = Precip.tot, y = Value, color = sci_name)) +
 
 
 
-datDrought <- dat_no_outlier%>%
+datDrought <- datLLNpeak%>%
   pivot_longer(cols = c(Precip.tot, VPD.avg, n.Rainless, RainlessConsec.max), 
                names_to = "Drought_Metric", values_to = "Metric_Value") %>%
   mutate(Drought_Metric = case_match(Drought_Metric,
@@ -504,7 +525,7 @@ ggplot(datDrought, aes(x = Metric_Value, y = weekPeakWt, color = sci_name)) +
 
 
 
-dat_annual_summary <- dat_no_outlier %>%
+dat_annual_summary <- datLLNpeak %>%
   group_by(year) %>%
   summarize(
     meanN = mean(perN.weighted, na.rm = TRUE),
@@ -540,7 +561,7 @@ ggplot(dat_species_summary, aes(x = Precip, y = meanN, color = sci_name)) +
   
 
 
-#dat_distyear <- dat_no_outlier %>%
+#dat_distyear <- datLLNpeak %>%
  # select(year, perN.weighted, weekPeakWt, Precip.tot) %>%
   #pivot_longer(cols = -year, names_to = "Variable", values_to = "Value") %>%
   #mutate(Clean_name = case_match(Variable,
@@ -560,7 +581,7 @@ ggplot(dat_species_summary, aes(x = Precip, y = meanN, color = sci_name)) +
 #  labs(color = "Year")
 
 
-#dat_distspec <- dat_no_outlier %>%
+#dat_distspec <- datLLNpeak %>%
  # select(sci_name, perN.weighted, weekPeakWt, Precip.tot) %>%
   #pivot_longer(cols = -sci_name, names_to = "Variable", values_to = "Value") %>%
   #mutate(Clean_name = case_match(Variable,
@@ -581,7 +602,7 @@ ggplot(dat_species_summary, aes(x = Precip, y = meanN, color = sci_name)) +
 
 
 
-#dat_longyear <- dat_no_outlier %>%
+#dat_longyear <- datLLNpeak %>%
  # select(year, perN.weighted, weekPeakWt, Precip.tot) %>%
   #pivot_longer(cols = -year, names_to = "Variable", values_to = "Value") %>%
   #mutate(Clean_name = case_match(Variable,
@@ -611,7 +632,7 @@ ggplot(dat_species_summary, aes(x = Precip, y = meanN, color = sci_name)) +
     #   fill = "Year")
 
 
-#dat_precipyear <- dat_no_outlier %>%
+#dat_precipyear <- datLLNpeak %>%
  # select(year, Precip.tot) %>%
   #distinct()
 #ggplot(dat_precipyear, aes(x = Precip.tot, y = as.factor(year))) +
@@ -622,7 +643,7 @@ ggplot(dat_species_summary, aes(x = Precip, y = meanN, color = sci_name)) +
     #   color = "Year")
 
 
-#dat_longsp <- dat_no_outlier %>%
+#dat_longsp <- datLLNpeak %>%
  # select(sci_name, perN.weighted, weekPeakWt, Precip.tot) %>%
   #pivot_longer(cols = -sci_name, names_to = "Variable", values_to = "Value") %>%
   #mutate(Clean_name = case_match(Variable,
@@ -654,45 +675,51 @@ ggplot(dat_longsp %>% filter(Variable == "weekPeakWt"), aes(x = as.factor(sci_na
 
 ########################################
 #Non-parametric tests ----
-year_catN <- aov(perN.weighted ~ as.factor(year), data=dat_no_outlier)
+year_catN <- aov(perN.weighted ~ as.factor(year), data=datLLNpeak)
 summary(year_catN)
 
-year_cat_time <- aov(weekPeakWt ~ as.factor(year), data=dat_no_outlier)
+year_cat_time <- aov(weekPeakWt ~ as.factor(year), data=datLLNpeak)
 summary(year_cat_time)
 
 
-YearN <- lme(perN.weighted ~ as.factor(year), random = list(sci_name = ~1, plot = ~1), data = dat_no_outlier)
+YearN <- lme(perN.weighted ~ as.factor(year), random = list(sci_name = ~1, plot = ~1), data = datLLNpeak)
 summary(YearN)
 r.squaredGLMM(YearN)
 
 
 
-cor.test(dat_no_outlier$Precip.tot, dat_no_outlier$perN.weighted, method = "spearman")
-cor.test(dat_no_outlier$Precip.tot, dat_no_outlier$weekPeakWt, method = "spearman")
-cor.test(dat_no_outlier$weekPeakWt, dat_no_outlier$perN.weighted, method = "spearman")
+cor.test(datLLNpeak$Precip.tot, datLLNpeak$perN.weighted, method = "spearman")
+cor.test(datLLNpeak$Precip.tot, datLLNpeak$weekPeakWt, method = "spearman")
+cor.test(datLLNpeak$weekPeakWt, datLLNpeak$perN.weighted, method = "spearman")
 
+
+# Kruskal-Wallis: Does Nitrogen vary significantly by Year?
+kruskal.test(perN.weighted ~ as.factor(year), data = datLLNpeak)
+
+# Kruskal-Wallis: Does Timing vary significantly by Year?
+kruskal.test(weekPeakWt ~ as.factor(year), data = datLLNpeak)
 
 
 library(quantreg)
-Nprecipmodel_median <- rq(perN.weighted ~ Precip.tot, data = dat_no_outlier, tau = 0.5)
+Nprecipmodel_median <- rq(perN.weighted ~ Precip.tot, data = datLLNpeak, tau = 0.5)
 summary(Nprecipmodel_median)
 
-Timeprecipmodel_median <- rq(weekPeakWt ~ Precip.tot, data = dat_no_outlier, tau = 0.5)
+Timeprecipmodel_median <- rq(weekPeakWt ~ Precip.tot, data = datLLNpeak, tau = 0.5)
 summary(Timeprecipmodel_median)
 
-TimeNmodel_median <- rq(perN.weighted ~ weekPeakWt, data = dat_no_outlier, tau = 0.5)
+TimeNmodel_median <- rq(perN.weighted ~ weekPeakWt, data = datLLNpeak, tau = 0.5)
 summary(TimeNmodel_median)
 
 
 taus <- c(0.1, 0.5, 0.9)
 for (t in taus) {
-  model <- rq(perN.weighted ~ Precip.tot, data = dat_no_outlier, tau = t)
+  model <- rq(perN.weighted ~ Precip.tot, data = datLLNpeak, tau = t)
   print(summary(model))}
 for (t in taus) {
-  model <- rq(weekPeakWt ~ Precip.tot, data = dat_no_outlier, tau = t)
+  model <- rq(weekPeakWt ~ Precip.tot, data = datLLNpeak, tau = t)
   print(summary(model))}
 for (t in taus) {
-  model <- rq(perN.weighted ~ weekPeakWt, data = dat_no_outlier, tau = t)
+  model <- rq(perN.weighted ~ weekPeakWt, data = datLLNpeak, tau = t)
   print(summary(model))}
 
 
@@ -789,4 +816,7 @@ year_spec_means <- dat.midsummer %>%
 
 
 
-
+library(mosaic)
+fav_stats(datLLNpeak$Precip.tot)
+fav_stats(datLLNpeak$perN.weighted)
+fav_stats(datLLNpeak$weekPeakWt)

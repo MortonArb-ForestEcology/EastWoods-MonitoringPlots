@@ -16,17 +16,17 @@ aggLeafTrap <- read.csv(file.path(path.REU, "LeafLitter_byTrap_latest.csv"))
 weekPeakTotal <- read.csv(file.path(path.REU, "LeafLitter_Peak_byTrap.csv"))
 
 weekPeakSpp <- read.csv(file.path(path.REU, "PeakLeafDates_byPlot_bySpp.csv"))
-weekPeakSpp <- weekPeakSpp[!is.na(weekPeakSpp$sci_name) & weekPeakSpp$sci_name %in% c("Quercus alba", "Quercus rubra", "Acer saccharum"),]
+weekPeakSpp <- weekPeakSpp[!is.na(weekPeakSpp$sci_name) & weekPeakSpp$sci_name %in% c("Quercus alba", "Quercus rubra", "Acer saccharum", "Tilia americana"),]
 summary(weekPeakSpp)
 
 datSpp <- read.csv(file.path(path.REU, "LeafLitter_byTrap_bySpecies_latest.csv"))
 datSpp$date_collection <- as.Date(datSpp$date_collection)
-datSpp <- datSpp[!is.na(datSpp$sci_name) & datSpp$sci_name %in% c("Quercus alba", "Quercus rubra", "Acer saccharum"),]
+datSpp <- datSpp[!is.na(datSpp$sci_name) & datSpp$sci_name %in% c("Quercus alba", "Quercus rubra", "Acer saccharum", "Tilia americana"),]
 summary(datSpp)
 
 
 datLLN <- read.csv(file.path(path.REU, "LeafLitter-Nitrogen_bySpecies_combined.csv"))
-datLLN <- datLLN[!datLLN$sci_name %in% c("Tilia americana"),]
+#datLLN <- datLLN[!datLLN$sci_name %in% c("Tilia americana"),]
 datLLN$date_collection <- as.Date(datLLN$date_collection)
 datLLN$year <- lubridate::year(datLLN$date_collection)
 datLLN$week <- lubridate::week(datLLN$date_collection)
