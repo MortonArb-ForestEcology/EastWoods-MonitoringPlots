@@ -237,6 +237,7 @@ names(LLN7) <- c("Name", "X.N", "X.C", "C.N", "plot", "date_collection", "sci_na
 
 
 
+#Plate 8
 LLN8_raw <- read_xlsx(file.path(path.CN, "Lizer_plate8.xlsx")) %>%
   as.data.frame()
 
@@ -261,18 +262,47 @@ names(LLN8) <- c("Name", "X.N", "X.C", "C.N", "plot", "date_collection", "sci_na
 summary(LLN8)
 
 
+#Needed to rerun a couple samples
+Run8_reruns_raw <- read_xlsx(file.path(path.CN, "FP2023_LL_9,14,16_Lizerrerun.xlsx")) %>%
+  as.data.frame()
+
+
+Run8_reruns <- Run8_reruns_raw[69:70, ] %>%
+  mutate(Name = case_when(
+    row_number() == 1 ~ "HH115_20211105_TIAM",
+    row_number() == 2 ~ "HH115_20191025_TIAM"
+  ))
+summary(Run8_reruns)
+
+Run8_reruns <- Run8_reruns %>%
+  clean_samples() %>%
+  assign_plot() %>%
+  extract_date("underscore") %>%
+  extract_species("underscore")
+
+Run8_reruns <- Run8_reruns[, c("Name", "N  [%]", "C  [%]", "C/N  ratio", "plot", "date_collection", "sci_name")]
+names(Run8_reruns) <- c("Name", "X.N", "X.C", "C.N", "plot", "date_collection", "sci_name")
+
+summary(Run8_reruns)
+
+
+## Removing duplicates ----
 
 #2019 outlier in LLN4a rerun in LLN8, taking this out of LLN4a
 LLN4a <- LLN4a %>%
   filter(!(Name == "B127_20191118_ACSA"))
 summary(LLN4a)
 
+LLN8 <- LLN8 %>%
+  filter(!(Name %in% c("HH115_20251025_TIAM", "HH115_20211105_TIAM")))
+summary(LLN8)
+
 
 ######################################################
 # Combine all runs ----
 ######################################################
 
-datLLN <- rbind(LLN2018, LLN2122, LLN2, LLN3, LLN4a, LLN4b, LLN5, LLN6, LLN7, LLN8)
+datLLN <- rbind(LLN2018, LLN2122, LLN2, LLN3, LLN4a, LLN4b, LLN5, LLN6, LLN7, LLN8, Run8_reruns)
 
 stopifnot(
   all(c("Name", "X.N", "X.C", "C.N",

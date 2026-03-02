@@ -52,7 +52,7 @@ dat.midsummer <- datLLN[month(datLLN$date_collection) %in% c(6, 7, 8), ]
 dat.fall <- datLLN[month(datLLN$date_collection) %in% c(9, 10, 11), ]
 
 dat.midsummer <- datLLN[month(datLLN$date_collection) %in% 6:8, ]
-
+# 
 summary(dat.midsummer)
 summary(dat.fall)
 
