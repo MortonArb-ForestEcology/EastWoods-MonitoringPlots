@@ -417,7 +417,9 @@ r.squaredGLMM(TimeN_year)
 library(mosaic)
 fav_stats(datLLNpeak$Precip.tot)
 fav_stats(datLLNpeak$perN.weighted)
+favstats(perN.weighted ~ sci_name, data = datLLNpeak)
 fav_stats(datLLNpeak$weekPeakWt)
+favstats(weekPeakWt ~ sci_name, data = datLLNpeak)
 
 ggplot(datLLNpeak, aes(x = Precip.tot, y = perN.weighted, color = sci_name)) +
   geom_jitter(alpha =0.6, width =3) +
@@ -1020,13 +1022,25 @@ ggplot(dat_efficiency_year, aes(x = weekPeakWt, y = resorp_eff_year)) +
   theme_minimal()
 
 #Since we have large inconsistencies with the date of midsummer collection (june 12th-august 31st maybe a species global value will be better)
+#deciding to remove 2018 and 2020 entirely since there was collection inconsistencies that make them not representative of true green leaves
+midsummer_no1820 <- dat.midsummer.merge %>% filter(!year %in% c(2018, 2020))
+summary(midsummer_no1820)
+
+midsummer_yearN_no1820 <- aov(X.N ~ as.factor(year), data=midsummer_no1820)
+summary(midsummer_yearN_no1820)
+tukey_yearN_green <- TukeyHSD(midsummer_yearN_no1820)
+print(tukey_yearN_green)
+
+datLLNpeak_no1820 <- datLLNpeak %>% filter(!year %in% c(2018, 2020)) %>%
+  droplevels()
+
 #creating reference "green summer value" for each SPECIES
-spec_N_means <- dat.midsummer.merge %>%
+spec_N_means <- dat.midsummer.merge %>% #midsummer_no1820
   group_by(sci_name) %>%
   summarize(greenN_spec = mean(X.N, na.rm = TRUE), .groups = "drop")
 
 #joining to peak litter data
-dat_efficiency_spec <- datLLNpeak %>%
+dat_efficiency_spec <- datLLNpeak_no1820 %>% #datLLNpeak_no1820
   left_join(spec_N_means, by = c("sci_name"))
 summary(dat_efficiency_spec)
 
@@ -1035,6 +1049,14 @@ dat_efficiency_spec <- dat_efficiency_spec %>%
   mutate(resorp_eff_spec = ((greenN_spec - perN.weighted) / greenN_spec) * 100)
 
 mosaic::fav_stats(dat_efficiency_spec$resorp_eff_spec)
+
+favstats(resorp_eff_spec ~ sci_name, data = dat_efficiency_spec)
+
+midsummer_yearresorp_no1820 <- aov(resorp_eff_spec ~ as.factor(year), data=dat_efficiency_spec)
+summary(midsummer_yearresorp_no1820)
+tukey_yearN_resorp <- TukeyHSD(midsummer_yearresorp_no1820)
+print(tukey_yearN_resorp)
+
 
 #run models with this!
 eff_precip_spec <- lme(resorp_eff_spec ~ Precip.tot, random = list(plot =~1, sci_name = ~1), data = dat_efficiency_spec)
@@ -1071,6 +1093,193 @@ ggplot(dat_efficiency_spec, aes(x = weekPeakWt, y = resorp_eff_spec, color = sci
   theme_minimal()
 
 
+eff_precip_spec_fixed <- lme(resorp_eff_spec ~ Precip.tot*sci_name, random = list(plot =~1), data = dat_efficiency_spec)
+summary(eff_precip_spec_fixed)
+anova(eff_precip_spec_fixed)
+r.squaredGLMM(eff_precip_spec_fixed)
+
+eff_time_spec_fixed <- lme(resorp_eff_spec ~ weekPeakWt*sci_name, random = list(plot =~1), data = dat_efficiency_spec)
+summary(eff_time_spec_fixed)
+anova(eff_time_spec_fixed)
+r.squaredGLMM(eff_time_spec_fixed)
+
+obj2_anova <- aov(resorp_eff_spec ~ sci_name, data = dat_efficiency_spec)
+obj2_tukey <- TukeyHSD(obj2_anova)
+print(obj2_tukey)
+
+
+
+####################################
+#Updated figures ----
+
+
+species_colors <- c(
+  "Acer saccharum" = "#961623", #"#882255",
+  "Quercus alba" = "#b3815eff", #"#b37141ff", #"8B4513",
+  "Quercus rubra" = "#E69F00", 
+  "Tilia americana" = "#005254"
+)
+
+species_shapes <- c(
+  "Acer saccharum" = 15, #Square
+  "Quercus alba" = 17,    #Triangle
+  "Quercus rubra" = 18,  #Diamond
+  "Tilia americana" = 16  #Circle
+)
+
+my_theme <- function() {
+  theme_minimal(base_size = 12, base_family = "sans") %+replace% 
+    theme(
+      panel.border = element_rect(color = "black", fill = NA, size = 1),
+      axis.line = element_line(color = "black"),
+      axis.ticks = element_line(color = "black"),
+      legend.position = "bottom",
+      legend.title = element_text(face = "bold"),
+      legend.text = element_text(size = 9),
+      legend.spacing.x = unit(0.1, "cm"),
+      legend.box.spacing = unit(0.2, "cm"),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      strip.background = element_rect(fill = "grey75", color = "black"),
+      strip.text = element_text(face = "italic"),
+    #  axis.title.y = element_text(margin = margin(r = 10), vjust = 1), 
+     plot.margin = margin(t = 10, r = 10, b = 10, l = 20)
+    )
+}
+
+
+#Timing vs Precipitation
+#pull the coefficients out of the lm to create the line
+intercept_precip_time <- fixef(DropPrecip)[1]
+slope_precip_time <- fixef(DropPrecip)[2]
+
+#create a range of precipitation values for the confidence interval
+pred_time_precip <- data.frame(Precip.tot = seq(
+  min(dat_efficiency_spec$Precip.tot),
+  max(dat_efficiency_spec$Precip.tot), 
+  length.out = 100))
+
+#get the design matrix for the new data
+mm_time_precip <- model.matrix(~ Precip.tot, data = pred_time_precip)
+
+# calculate predicted values (y = X * beta)
+pred_time_precip$weekPeakWt <- mm_time_precip %*% fixef(DropPrecip)
+
+#calculate standard errors for the fixed effects
+pvar_time_precip <- diag(mm_time_precip %*% vcov(DropPrecip) %*% t(mm_time_precip))
+pred_time_precip$SE <- sqrt(pvar_time_precip)
+
+# create upper and lower bounds
+pred_time_precip$upper <- pred_time_precip$weekPeakWt + 1.96 * pred_time_precip$SE
+pred_time_precip$lower <- pred_time_precip$weekPeakWt - 1.96 * pred_time_precip$SE
+
+#plot
+ggplot(dat_efficiency_spec, aes(x = Precip.tot, y = weekPeakWt, color = sci_name)) +
+  geom_ribbon(data = pred_time_precip, aes(x = Precip.tot, ymin = lower, ymax = upper), fill = "grey", alpha = 0.3, inherit.aes = FALSE) +
+  geom_abline(intercept = intercept_precip_time, slope = slope_precip_time, color = "black", size = 1) +
+  geom_jitter(alpha = 0.6, width = 1, size = 1.5) + 
+  geom_smooth(aes(color = sci_name), method = "lm", se = FALSE, size = 0.6, alpha = 0.5, linetype="dashed") +
+  scale_color_manual(values = species_colors) +
+ # scale_shape_manual(values = species_shapes, name = "Species") +
+  labs(
+    x = "Cumulative Summer Precipitation (mm)",
+    y = "Timing of Peak Senescence\n(Calendar Week)",
+    color = "Species"
+  ) +
+  my_theme()
+
+
+
+
+
+#Resorption vs Precipitation
+#pull the coefficients out of the lm to create the line
+intercept_precip_resorp <- fixef(eff_precip_spec)[1]
+slope_precip_resorp <- fixef(eff_precip_spec)[2]
+
+#create a range of precipitation values for the confidence interval
+pred_resorp_precip <- data.frame(Precip.tot = seq(
+  min(dat_efficiency_spec$Precip.tot),
+  max(dat_efficiency_spec$Precip.tot), 
+  length.out = 100))
+
+#get the design matrix for the new data
+mm_resorp_precip <- model.matrix(~ Precip.tot, data = pred_resorp_precip)
+
+# calculate predicted values (y = X * beta)
+pred_resorp_precip$resorp_eff_spec <- mm_resorp_precip %*% fixef(eff_precip_spec)
+
+#calculate standard errors for the fixed effects
+pvar_resorp_precip <- diag(mm_resorp_precip %*% vcov(eff_precip_spec) %*% t(mm_resorp_precip))
+pred_resorp_precip$SE <- sqrt(pvar_resorp_precip)
+
+# create upper and lower bounds
+pred_resorp_precip$upper <- pred_resorp_precip$resorp_eff_spec + 1.96 * pred_resorp_precip$SE
+pred_resorp_precip$lower <- pred_resorp_precip$resorp_eff_spec - 1.96 * pred_resorp_precip$SE
+
+#plot
+ggplot(dat_efficiency_spec, aes(x = Precip.tot, y = resorp_eff_spec, color = sci_name)) +
+  geom_ribbon(data = pred_resorp_precip, aes(x = Precip.tot, ymin = lower, ymax = upper), fill = "grey", alpha = 0.3, inherit.aes = FALSE) +
+  geom_abline(intercept = intercept_precip_resorp, slope = slope_precip_resorp, color = "black", size = 1, linetype="solid") +
+  geom_jitter(data = dat_efficiency_spec, alpha = 0.6, width = 1, size = 1.5) + 
+  geom_smooth(aes(color = sci_name), method = "lm", se = FALSE, size = 0.6, alpha = 0.5, linetype="dashed") +
+  scale_color_manual(values = species_colors) +
+  labs(
+    x = "Cumulative Summer Precipitation (mm)",
+    y = "Nitrogen Resorption Efficiency (%)",
+    color = "Species"
+  ) +
+  my_theme()
+
+
+#Timing vs resorption
+#pull the coefficients out of the lm to create the line
+intercept_time_resorp <- fixef(eff_time_spec)[1]
+slope_time_resorp <- fixef(eff_time_spec)[2]
+
+
+#create a range of precipitation values for the confidence interval
+pred_resorp_time <- data.frame(weekPeakWt = seq(
+  min(dat_efficiency_spec$weekPeakWt),
+  max(dat_efficiency_spec$weekPeakWt), 
+  length.out = 100))
+
+#get the design matrix for the new data
+mm_resorp_time <- model.matrix(~ weekPeakWt, data = pred_resorp_time)
+
+# calculate predicted values (y = X * beta)
+pred_resorp_time$resorp_eff_spec <- mm_resorp_time %*% fixef(eff_time_spec)
+
+#calculate standard errors for the fixed effects
+pvar_resorp_time <- diag(mm_resorp_time %*% vcov(eff_time_spec) %*% t(mm_resorp_time))
+pred_resorp_time$SE <- sqrt(pvar_resorp_time)
+
+# create upper and lower bounds
+pred_resorp_time$upper <- pred_resorp_time$resorp_eff_spec + 1.96 * pred_resorp_time$SE
+pred_resorp_time$lower <- pred_resorp_time$resorp_eff_spec - 1.96 * pred_resorp_time$SE
+
+#plot
+ggplot(dat_efficiency_spec, aes(x = weekPeakWt, y = resorp_eff_spec, color = sci_name)) +
+  geom_ribbon(data = pred_resorp_time, aes(x = weekPeakWt, ymin = lower, ymax = upper), fill = "grey", alpha = 0.3, inherit.aes = FALSE) +
+  geom_abline(intercept = intercept_time_resorp, slope = slope_time_resorp, color = "black", size = 1) +
+  geom_point(alpha = 0.6, size = 1.5) + 
+  geom_smooth(aes(color = sci_name), method = "lm", se = FALSE, size = 0.6, alpha = 0.5, linetype="dashed") +
+  scale_color_manual(values = species_colors) +
+  labs(
+    x = "Timing of Peak Senescence\n(Calendar Week)",
+    y = "Nitrogen Resorption Efficiency (%)",
+    color = "Species"
+  ) +
+  my_theme()
+
+
+
+
+
+
+
+
+
 ###change this code to have a version of this with the desired resorption efficiency
 # datDroughteff <- datLLNpeak%>%
 #   pivot_longer(cols = c(Precip.tot, VPD.avg, n.Rainless, RainlessConsec.max), 
@@ -1090,3 +1299,25 @@ ggplot(dat_efficiency_spec, aes(x = weekPeakWt, y = resorp_eff_spec, color = sci
 #        color = "Species") +
 #   theme_minimal()
 
+
+# species_colors <- c(
+#   "Acer saccharum" = "#961623", "#961623", "#8C3F48", "#B14E5A"
+#   "Quercus alba" = "#D9AF6B", "#A6761D",  "#C49133"
+#   "Quercus rubra" = "#8B4513", "#A66E4A", "#8B4513"   
+#   "Tilia americana" = "#4E6E58", "#005254"     
+# ) 
+
+
+ggplot(dat_efficiency_spec, aes(x = Precip.tot, y = weekPeakWt, color = sci_name, shape=sci_name)) +
+  geom_ribbon(data = pred_time_precip, aes(x = Precip.tot, ymin = lower, ymax = upper), fill = "grey", alpha = 0.3, inherit.aes = FALSE) +
+  geom_abline(intercept = intercept_precip_time, slope = slope_precip_time, color = "black", size = 1) +
+  geom_jitter(alpha = 0.6, width = 1, size = 1.5) + 
+  geom_smooth(aes(color = sci_name), method = "lm", se = FALSE, size = 0.5, alpha = 0.5, linetype="dashed") +
+  scale_color_manual(values = species_colors) +
+  scale_shape_manual(values = species_shapes, name = "Species") +
+  labs(
+    x = "Cumulative Summer Precipitation (mm)",
+    y = "Timing of Peak Senescence\n(Calendar Week)",
+    color = "Species"
+  ) +
+  my_theme()
