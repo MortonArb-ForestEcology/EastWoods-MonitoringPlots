@@ -4,7 +4,8 @@ library(tidyr)
 library(nlme);  # Does the mixed effects model
 library(emmeans) # will et us do a multi-comparisons test
 library(MuMIn)
-
+library(mosaic)
+    
 # Set up file paths etc. --> this should also indicate where you can find these files!
 path.google <- "~/Google Drive/My Drive/REU 2025 - Morton Arboretum Leaf Litter"
 path.litter <- file.path(path.google, "East Woods/Rollinson_Monitoring/Data/Leaf_litter_data")
@@ -23,7 +24,6 @@ datLLNmerge <- read.csv(file.path(path.REU, "LeafLitter_combined_TimingNDrought.
 #^^maintains individual entries for each collection
 summary(datLLNmerge)
 str(datLLNmerge)
-
 
 
 datLLNmerge$date_collection <- as.Date(datLLNmerge$date_collection)
@@ -1021,26 +1021,30 @@ ggplot(dat_efficiency_year, aes(x = weekPeakWt, y = resorp_eff_year)) +
   ) +
   theme_minimal()
 
+
+
 #Since we have large inconsistencies with the date of midsummer collection (june 12th-august 31st maybe a species global value will be better)
 #deciding to remove 2018 and 2020 entirely since there was collection inconsistencies that make them not representative of true green leaves
 midsummer_no1820 <- dat.midsummer.merge %>% filter(!year %in% c(2018, 2020))
 summary(midsummer_no1820)
 
+datLLNpeak_no1820 <- datLLNpeak %>% filter(!year %in% c(2018, 2020)) %>%
+  droplevels()
+
+#does year have a significant effect on green N after removing 2018 and 2020?
 midsummer_yearN_no1820 <- aov(X.N ~ as.factor(year), data=midsummer_no1820)
 summary(midsummer_yearN_no1820)
 tukey_yearN_green <- TukeyHSD(midsummer_yearN_no1820)
 print(tukey_yearN_green)
 
-datLLNpeak_no1820 <- datLLNpeak %>% filter(!year %in% c(2018, 2020)) %>%
-  droplevels()
 
 #creating reference "green summer value" for each SPECIES
-spec_N_means <- dat.midsummer.merge %>% #midsummer_no1820
+spec_N_means <- midsummer_no1820 %>%
   group_by(sci_name) %>%
   summarize(greenN_spec = mean(X.N, na.rm = TRUE), .groups = "drop")
 
-#joining to peak litter data
-dat_efficiency_spec <- datLLNpeak_no1820 %>% #datLLNpeak_no1820
+#joining reference values to peak litter data
+dat_efficiency_spec <- datLLNpeak_no1820 %>% 
   left_join(spec_N_means, by = c("sci_name"))
 summary(dat_efficiency_spec)
 
@@ -1059,11 +1063,13 @@ print(tukey_yearN_resorp)
 
 
 #run models with this!
+#objective 1: resorption efficiency vs precipitaiton
 eff_precip_spec <- lme(resorp_eff_spec ~ Precip.tot, random = list(plot =~1, sci_name = ~1), data = dat_efficiency_spec)
 summary(eff_precip_spec)
 anova(eff_precip_spec)
 r.squaredGLMM(eff_precip_spec)
 
+#objective 2: resorption efficiency vs timing
 eff_time_spec <- lme(resorp_eff_spec ~ weekPeakWt, random = list(plot =~1, sci_name = ~1), data = dat_efficiency_spec)
 summary(eff_time_spec)
 anova(eff_time_spec)
