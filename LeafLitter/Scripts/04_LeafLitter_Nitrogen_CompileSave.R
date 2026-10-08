@@ -12,7 +12,7 @@ path.CN <- file.path(path.google, "East Woods/Rollinson_Monitoring/Data/Leaf_lit
 path.figs <- file.path(path.litter, "figures") # where we shoudl save some figures
 path.save <- file.path(path.litter, "LeafLitterData_Clean_forArchiving") # Where we shoudl save the data
 
-path.CN <- "~/Library/CloudStorage/GoogleDrive-lizer1@stolaf.edu/.shortcut-targets-by-id/0B_Fbr697pd36TkVHdDNJQ1dJU1E/East Woods/Rollinson_Monitoring/Data/Leaf_litter_data/CN_Runs/"
+# path.CN <- "~/Library/CloudStorage/GoogleDrive-lizer1@stolaf.edu/.shortcut-targets-by-id/0B_Fbr697pd36TkVHdDNJQ1dJU1E/East Woods/Rollinson_Monitoring/Data/Leaf_litter_data/CN_Runs/"
 
 dir(path.CN)
 
@@ -310,7 +310,7 @@ stopifnot(
 
 summary(datLLN)
 
-write.csv(datLLN, file.path ("~/Library/CloudStorage/GoogleDrive-lizer1@stolaf.edu/.shortcut-targets-by-id/1q2wvODXrDo0tgOTLpFqF7TqcWoKoHZjW/URF-REU 2025 - Lizer - Leaf Litter/", "LeafLitter-Nitrogen_bySpecies_combined.csv"), row.names=F) 
+write.csv(datLLN, file.path (path.google, "URF-REU 2025 - Lizer - Leaf Litter/", "LeafLitter-Nitrogen_bySpecies_combined.csv"), row.names=F) 
 
 
 
