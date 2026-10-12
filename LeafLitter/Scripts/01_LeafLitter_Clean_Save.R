@@ -15,14 +15,17 @@ path.litter <- file.path(path.google, "East Woods/Rollinson_Monitoring/Data/Leaf
 path.figs <- file.path(path.litter, "figures") # where we shoudl save some figures
 path.save <- file.path(path.litter, "LeafLitterData_Clean_forArchiving") # Where we shoudl save the data
 
-googlesheets4::gs4_auth(email="crollinson@mortonarb.org")
+#comment out other users emails for authentication 
+#googlesheets4::gs4_auth(email="crollinson@mortonarb.org")
+
+googlesheets4::gs4_auth(email="breidy@mortonarb.org")
 
 if(!dir.exists(path.figs)) dir.create(path.figs, recursive=T)
 if(!dir.exists(path.save)) dir.create(path.save, recursive=T)
 
 # Should we overwrite old data or not?
 overwrite=T
-# yrsCheck = 2018:2025
+# yrsCheck = 2018:2026
 yrsCheck = 2023:2025
 # The Google Drive key ID for the leaf litter spreadsheet; 
 keyLeafLitter <- "1d7Py4ehN2PmrmKmyv2hDUkX4fWa95xdlQlGVBN9x20g" 
