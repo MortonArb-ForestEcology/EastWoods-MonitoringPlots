@@ -32,7 +32,7 @@ datLitter$yday <- lubridate::yday(datLitter$date_collection)
 datLitter$week <- lubridate::week(datLitter$date_collection)
 summary(datLitter)
 
-datLitter <- datLitter[datLitter$year<2024,]
+datLitter <- datLitter[datLitter$year<=2024,]
 summary(datLitter)
 
 #Issue with this line here----
@@ -186,7 +186,7 @@ summary(datLeaf)
 tail(datLeaf[is.na(datLeaf$mass_g_day) & !is.na(datLeaf$mass_g),])
 dim(datLeaf)
 
-dir(path.google)
+# dir(path.google)
 write.csv(datLeaf, file.path(path.google, "URF-REU 2025 - Lizer - Leaf Litter", "LeafLitter_byTrap_bySpecies_latest.csv"), row.names=F)
 
 # This added in a lot of NAs because we added half our traps a couple years in

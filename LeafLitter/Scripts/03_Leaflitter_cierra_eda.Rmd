@@ -155,7 +155,7 @@ ggplot(tissue_mass_by_week, aes(x = factor(week), y = total_mass_g, fill = tissu
 
 Leaf mass by genus by week
 ```{r}
-leaf_mass_by_genus_week <-  %>%
+leaf_mass_by_genus_week <-  datLeafLitter%>%
   filter(tissue == "leaf") %>%
   group_by(year, week, genus) %>%
   summarise(total_leaf_mass_g = sum(mass_g, na.rm = TRUE)) %>%

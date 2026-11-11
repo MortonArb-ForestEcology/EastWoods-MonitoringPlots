@@ -310,7 +310,7 @@ stopifnot(
 
 summary(datLLN)
 
-write.csv(datLLN, file.path ("~/Google Drive/My Drive/URF-REU 2025 - Lizer - Leaf Litter/", "LeafLitter-Nitrogen_bySpecies_combined.csv"), row.names=F) 
+write.csv(datLLN, file.path (path.google, "URF-REU 2025 - Lizer - Leaf Litter/", "LeafLitter-Nitrogen_bySpecies_combined.csv"), row.names=F)
 
 
 
