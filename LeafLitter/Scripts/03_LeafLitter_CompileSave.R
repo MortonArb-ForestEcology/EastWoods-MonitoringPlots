@@ -186,8 +186,8 @@ summary(datLeaf)
 tail(datLeaf[is.na(datLeaf$mass_g_day) & !is.na(datLeaf$mass_g),])
 dim(datLeaf)
 
-
-write.csv(datLeaf, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter", "LeafLitter_byTrap_bySpecies_latest.csv"), row.names=F)
+dir(path.google)
+write.csv(datLeaf, file.path(path.google, "URF-REU 2025 - Lizer - Leaf Litter", "LeafLitter_byTrap_bySpecies_latest.csv"), row.names=F)
 
 # This added in a lot of NAs because we added half our traps a couple years in
 for(PLT in unique(aggLeafTrap$plot)){
@@ -219,7 +219,7 @@ aggLeafTrap$mass_prop <- aggLeafTrap$mass_g/aggLeafTrap$totalMass_year
 summary(aggLeafTrap)
 aggLeafTrap[is.na(aggLeafTrap$totalMass_year),]
 
-write.csv(aggLeafTrap, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter", "LeafLitter_byTrap_latest.csv"), row.names=F)
+write.csv(aggLeafTrap, file.path(path.google, "URF-REU 2025 - Lizer - Leaf Litter", "LeafLitter_byTrap_latest.csv"), row.names=F)
 
 # Getting some plot-level summary stats
 aggLeafPlot <- aggregate(cbind(mass_g, mass_g_day, mass_prop, totalMass_year)~ year + plot + week + date_collection, data=aggLeafTrap, FUN=mean)
@@ -263,7 +263,7 @@ summary(weekPeak)
 weekPeak[weekPeak$prop5Wk<0.5,]
 
 
-write.csv(weekPeak, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter", "PeakLeafDates_byPlot.csv"), row.names=F)
+write.csv(weekPeak, file.path(path.google, "URF-REU 2025 - Lizer - Leaf Litter", "PeakLeafDates_byPlot.csv"), row.names=F)
 #all the info is in weekPeak df, this is fine
 
 #Problem starts here----
@@ -305,7 +305,7 @@ summary(leafTrapTotal)
 # weekPeak[weekPeak$prop5Wk<0.5,]
 head(leafTrapTotal)
 
-write.csv(leafTrapTotal, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter", "LeafLitter_Peak_byTrap.csv"), row.names=F)
+write.csv(leafTrapTotal, file.path(path.google, "URF-REU 2025 - Lizer - Leaf Litter", "LeafLitter_Peak_byTrap.csv"), row.names=F)
 
 
 # Now Doing week peak by Species by Plot
@@ -362,7 +362,7 @@ summary(weekPeakSpp)
 weekPeakSpp[weekPeakSpp$prop5Wk<0.5 & !is.na(weekPeakSpp$prop5Wk),]
 
 
-write.csv(weekPeakSpp, file.path(path.google, "URF REU 2025 - Lizer - Leaf Litter", "PeakLeafDates_byPlot_bySpp.csv"), row.names=F)
+write.csv(weekPeakSpp, file.path(path.google, "URF-REU 2025 - Lizer - Leaf Litter", "PeakLeafDates_byPlot_bySpp.csv"), row.names=F)
 # 
 # 
 
